@@ -134,8 +134,8 @@ class PretrainConfig(BaseModel):
 class BaseConfig(BaseModel):
     # v0 is original rewards, v1 is minimal, v2 multiply, v3 sum, v4 curriculum
     # env 1 is original observations, 3 is updated
-    env_name: str = "TrajectoryPlannerEnvironmentRaysReward3-v3"
-    # env_name: str = "TrajectoryPlannerEnvironmentImgsReward3-v0"
+    # env_name: str = "TrajectoryPlannerEnvironmentRaysReward3-v3"
+    env_name: str = "TrajectoryPlannerEnvironmentImgsReward3-v0"
     reward_mode: Optional[str] = "sum"  # vals: sum, curriculum_step
     map_key: str = "dynamic_convex_obstacle"
     seed: int = 10  # 10, 100, 200

@@ -1,4 +1,4 @@
-name: drl-traj-plan
+name: ae
 channels:
   - conda-forge
   - defaults
