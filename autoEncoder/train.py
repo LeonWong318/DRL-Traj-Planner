@@ -7,7 +7,7 @@ from dataLoad import create_dataloaders
 
 def main():
     # Parameters
-    base_path = "../data"  # Path to the dataset
+    base_path = "../trial_data"  # Path to the dataset
     batch_size = 64        # Batch size for training
     latent_dim = 8       # Dimensionality of the latent space
     base_channel_size = 32 # Base number of channels in the encoder/decoder
