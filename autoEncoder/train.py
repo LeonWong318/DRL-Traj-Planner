@@ -9,7 +9,7 @@ def main():
     # Parameters
     base_path = "../data"  # Path to the dataset
     batch_size = 64        # Batch size for training
-    latent_dim = 128       # Dimensionality of the latent space
+    latent_dim = 8       # Dimensionality of the latent space
     base_channel_size = 32 # Base number of channels in the encoder/decoder
     num_epochs = 50        # Number of epochs to train
     width, height, num_input_channels = 54, 54, 3  # Updated dimensions for input

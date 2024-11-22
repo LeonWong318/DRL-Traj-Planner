@@ -72,8 +72,8 @@ def create_dataloaders(base_path, batch_size=32, train_split=0.8, shuffle=True):
 
     train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=15)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=15)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=15,persistent_workers=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=15, persistent_workers=True)
 
     return train_loader, test_loader
 
