@@ -31,7 +31,7 @@ def evaluate_model(model, test_loader, num_samples=5):
     Returns:
         None
     """
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # Ensure evaluation on CPU
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  
     model.to(device)
 
     # Compute reconstruction loss
