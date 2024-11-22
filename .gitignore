@@ -1,7 +1,7 @@
 **/__pycache__/
 *.pyc
 *.pyo
-*.png
+# *.png
 *.sif
 *.avi
 .DS_Store
