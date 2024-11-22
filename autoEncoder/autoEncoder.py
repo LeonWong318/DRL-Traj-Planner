@@ -27,18 +27,19 @@ class Encoder(nn.Module):
             act_fn(),
             nn.Conv2d(c_hid, c_hid, kernel_size=3, padding=1),
             act_fn(),
-            nn.Conv2d(c_hid, 2*c_hid, kernel_size=3, padding=1, stride=2),  # 27x27 -> 14x14
+            nn.Conv2d(c_hid, 2 * c_hid, kernel_size=3, padding=1, stride=2),  # 27x27 -> 14x14
             act_fn(),
-            nn.Conv2d(2*c_hid, 2*c_hid, kernel_size=3, padding=1),
+            nn.Conv2d(2 * c_hid, 2 * c_hid, kernel_size=3, padding=1),
             act_fn(),
-            nn.Conv2d(2*c_hid, 2*c_hid, kernel_size=3, padding=1, stride=2),  # 14x14 -> 7x7
+            nn.Conv2d(2 * c_hid, 2 * c_hid, kernel_size=3, padding=1, stride=2),  # 14x14 -> 7x7
             act_fn(),
             nn.Flatten(),  # Convert to a single feature vector
-            nn.Linear(2*7*7*c_hid, latent_dim)
+            nn.Linear(2 * 7 * 7 * c_hid, latent_dim)
         )
 
     def forward(self, x):
         return self.net(x)
+
 
 
 
@@ -52,15 +53,15 @@ class Decoder(nn.Module):
         super().__init__()
         c_hid = base_channel_size
         self.linear = nn.Sequential(
-            nn.Linear(latent_dim, 2*7*7*c_hid),
+            nn.Linear(latent_dim, 2 * 7 * 7 * c_hid),
             act_fn()
         )
         self.net = nn.Sequential(
-            nn.ConvTranspose2d(2*c_hid, 2*c_hid, kernel_size=3, output_padding=1, padding=1, stride=2),  # 7x7 -> 14x14
+            nn.ConvTranspose2d(2 * c_hid, 2 * c_hid, kernel_size=3, output_padding=1, padding=1, stride=2),  # 7x7 -> 14x14
             act_fn(),
-            nn.Conv2d(2*c_hid, 2*c_hid, kernel_size=3, padding=1),
+            nn.Conv2d(2 * c_hid, 2 * c_hid, kernel_size=3, padding=1),
             act_fn(),
-            nn.ConvTranspose2d(2*c_hid, c_hid, kernel_size=3, output_padding=1, padding=1, stride=2),  # 14x14 -> 27x27
+            nn.ConvTranspose2d(2 * c_hid, c_hid, kernel_size=3, output_padding=1, padding=1, stride=2),  # 14x14 -> 27x27
             act_fn(),
             nn.Conv2d(c_hid, c_hid, kernel_size=3, padding=1),
             act_fn(),

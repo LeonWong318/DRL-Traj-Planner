@@ -7,12 +7,12 @@ from dataLoad import create_dataloaders
 
 def main():
     # Parameters
-    base_path = "../trial_data"  # Path to the dataset
+    base_path = "../data"  # Path to the dataset
     batch_size = 64        # Batch size for training
-    latent_dim = 32       # Dimensionality of the latent space
+    latent_dim = 128       # Dimensionality of the latent space
     base_channel_size = 32 # Base number of channels in the encoder/decoder
     num_epochs = 50        # Number of epochs to train
-    width, height, num_input_channels = 54, 54, 3  # Updated dimensions
+    width, height, num_input_channels = 54, 54, 3  # Updated dimensions for input
 
     # Create DataLoaders
     train_loader, val_loader = create_dataloaders(base_path, batch_size=batch_size, train_split=0.8)
