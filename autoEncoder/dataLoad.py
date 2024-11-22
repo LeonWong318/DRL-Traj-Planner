@@ -76,8 +76,7 @@ def create_dataloaders(base_path, batch_size=32, train_split=0.8, shuffle=True):
 
     return train_loader, test_loader
 
-base_path = "../data"
-train_loader, test_loader = create_dataloaders(base_path, batch_size=64)
+
 
 # # Example: Iterate through train_loader
 # for batch_idx, batch in enumerate(train_loader):
