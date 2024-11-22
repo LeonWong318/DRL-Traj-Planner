@@ -2,6 +2,30 @@ import torch
 import matplotlib.pyplot as plt
 from autoEncoder import Autoencoder
 from dataLoad import create_dataloaders
+import os
+import re
+import glob
+import argparse
+
+# Function to extract latent_dim from file name
+def extract_latent_dim_from_filename(filename):
+    # Match a number before 'e' in the file name (e.g., "8e100" -> 8)
+    match = re.search(r'(\d+)e', filename)
+    if match:
+        return int(match.group(1))
+    else:
+        raise ValueError(f"Could not extract latent_dim from filename: {filename}")
+
+# Function to get the latest model path (based on creation/modification time)
+def get_latest_model_path(base_path='model/'):
+    # Get a list of model files in the base directory
+    model_files = glob.glob(os.path.join(base_path, '*.pth'))
+    
+    # Sort the model files by modification time (latest first)
+    model_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    
+    # Return the most recent model file, or None if there are no files
+    return os.path.basename(model_files[0]) if model_files else None
 
 def load_model(model_path, base_channel_size, latent_dim, num_input_channels, width, height):
     """
@@ -70,12 +94,21 @@ def evaluate_model(model, test_loader, num_samples=5):
         plt.axis("off")
         plt.show()
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='Evaluate model')
+    parser.add_argument('--model', type=str, default=get_latest_model_path(), help='Dimensionality of the latent space')
+    parser.add_argument('--ld', type=int, default=extract_latent_dim_from_filename(get_latest_model_path()), help='Number of epochs for training')
+    return parser.parse_args()
+
 def main():
     # Parameters
+    args = parse_args()
     base_path = "../test_data"  # Path to the dataset
     batch_size = 64        # Batch size for evaluation
-    model_path = "model/autoencoder_alldata_8e100.pth"  # Path to the trained model
-    latent_dim = 8      # Dimensionality of the latent space
+    model_path = os.path.join("model/",args.model)   # Auto using latest model
+    
+    print(f"Evaluating model: {args.model}")
+    latent_dim = args.ld      # Dimensionality of the latent space
     base_channel_size = 32 # Base number of channels in the encoder/decoder
     width, height, num_input_channels = 54, 54, 3  # Input dimensions
 
