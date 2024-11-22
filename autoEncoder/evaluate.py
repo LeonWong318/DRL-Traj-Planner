@@ -1,49 +1,92 @@
-from autoEncoder import Autoencoder  # Assuming the model class is in this module
 import torch
+import matplotlib.pyplot as plt
+from autoEncoder import Autoencoder
 from dataLoad import create_dataloaders
 
+def load_model(model_path, base_channel_size, latent_dim, num_input_channels, width, height):
+    """
+    Load the trained autoencoder model from a saved state.
+    """
+    model = Autoencoder(
+        base_channel_size=base_channel_size,
+        latent_dim=latent_dim,
+        num_input_channels=num_input_channels,
+        width=width,
+        height=height
+    )
+    checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
+    model.load_state_dict(checkpoint, strict=False)
+    model.eval()  # Set model to evaluation mode
+    return model
 
-base_path = "../trial_data"  # Path to the dataset
-batch_size = 64        # Batch size for training
-latent_dim = 32       # Dimensionality of the latent space
-base_channel_size = 32 # Base number of channels in the encoder/decoder
-num_epochs = 50        # Number of epochs to train
-width, height, num_input_channels = 54, 54, 3  # Updated dimensions
+def evaluate_model(model, test_loader, num_samples=5):
+    """
+    Evaluate the model on the test dataset.
 
-# Create DataLoaders
-train_loader, val_loader = create_dataloaders(base_path, batch_size=batch_size, train_split=0.8)
+    Args:
+        model (Autoencoder): The trained autoencoder.
+        test_loader (DataLoader): DataLoader for the test dataset.
+        num_samples (int): Number of samples to visualize.
 
-# Initialize the model
-model = Autoencoder(
-    base_channel_size=base_channel_size,
-    latent_dim=latent_dim,
-    num_input_channels=num_input_channels,
-    width=width,
-    height=height
-)
+    Returns:
+        None
+    """
+    device = torch.device("cpu")  # Ensure evaluation on CPU
+    model.to(device)
 
+    # Compute reconstruction loss
+    total_loss = 0
+    num_batches = 0
+    for batch in test_loader:
+        batch = batch.to(device)
+        with torch.no_grad():
+            reconstructed = model(batch)
+            loss = torch.nn.functional.mse_loss(batch, reconstructed, reduction="sum")
+            total_loss += loss.item()
+        num_batches += 1
+    average_loss = total_loss / len(test_loader.dataset)
 
-# Load the saved state dictionary
-model.load_state_dict(torch.load("autoencoder_final.pth"))
-model.eval()  # Set the model to evaluation mode
+    print(f"Reconstruction Loss: {average_loss:.4f}")
 
+    # Visualize a few samples
+    test_iter = iter(test_loader)
+    batch = next(test_iter).to(device)
 
-
-
-def evaluate_model(model, dataloader):
-    model.eval()
-    total_mse = 0.0
-    total_count = 0
     with torch.no_grad():
-        for images, _ in dataloader:
-            images = images.to(model.device)
-            reconstructions = model(images)
-            mse = F.mse_loss(reconstructions, images, reduction='sum')
-            total_mse += mse.item()
-            total_count += images.size(0)
-    
-    average_mse = total_mse / total_count
-    print(f"Average MSE: {average_mse}")
+        reconstructed = model(batch)
 
-# Call this function after training
-evaluate_model(model, val_loader)
+    # Select a few samples to visualize
+    for i in range(min(num_samples, batch.size(0))):
+        plt.figure(figsize=(6, 3))
+        # Original image
+        plt.subplot(1, 2, 1)
+        plt.title("Original")
+        plt.imshow(batch[i].permute(1, 2, 0).cpu().numpy())
+        plt.axis("off")
+        # Reconstructed image
+        plt.subplot(1, 2, 2)
+        plt.title("Reconstructed")
+        plt.imshow(reconstructed[i].permute(1, 2, 0).cpu().numpy())
+        plt.axis("off")
+        plt.show()
+
+def main():
+    # Parameters
+    base_path = "../trial_data"  # Path to the dataset
+    batch_size = 64        # Batch size for evaluation
+    model_path = "autoencoder_final.pth"  # Path to the trained model
+    latent_dim = 128       # Dimensionality of the latent space
+    base_channel_size = 32 # Base number of channels in the encoder/decoder
+    width, height, num_input_channels = 54, 54, 3  # Input dimensions
+
+    # Create DataLoader for the test set
+    _, test_loader = create_dataloaders(base_path, batch_size=batch_size, train_split=0.8)
+
+    # Load the model
+    model = load_model(model_path, base_channel_size, latent_dim, num_input_channels, width, height)
+
+    # Evaluate the model
+    evaluate_model(model, test_loader, num_samples=5)
+
+if __name__ == "__main__":
+    main()

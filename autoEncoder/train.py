@@ -51,7 +51,7 @@ def main():
     trainer.fit(model, train_loader, val_loader)
 
     # Save the final model
-    torch.save(model.state_dict(), "autoencoder_final.pth")
+    torch.save(model.state_dict(), "autoencoder_final_{val_loss:.2f}.pth")
 
 if __name__ == "__main__":
     main()
