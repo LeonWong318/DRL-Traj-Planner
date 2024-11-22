@@ -46,10 +46,11 @@ class EpisodeDataset(Dataset):
 
     def __getitem__(self, idx):
         """
-        Load the tensor at the given index.
+        Load the tensor at the given index. 
         """
         tensor_path = self.tensor_paths[idx]
-        return torch.load(tensor_path)
+        return torch.load(tensor_path, weights_only=True)  # Only return the tensor
+
 
 def create_dataloaders(base_path, batch_size=32, train_split=0.8, shuffle=True):
     """
@@ -71,8 +72,8 @@ def create_dataloaders(base_path, batch_size=32, train_split=0.8, shuffle=True):
 
     train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=15)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=15)
 
     return train_loader, test_loader
 
