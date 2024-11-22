@@ -7,7 +7,7 @@ from dataLoad import create_dataloaders
 
 def main():
     # Parameters
-    base_path = "../trial_data"  # Path to the dataset
+    base_path = "../data"  # Path to the dataset
     batch_size = 64        # Batch size for training
     latent_dim = 64       # Dimensionality of the latent space
     base_channel_size = 32 # Base number of channels in the encoder/decoder
@@ -34,16 +34,17 @@ def main():
         save_top_k=1,
         mode="min",
     )
-    early_stopping_callback = EarlyStopping(
-        monitor="val_loss",
-        patience=10,
-        mode="min"
-    )
+    # early_stopping_callback = EarlyStopping(
+    #     monitor="val_loss",
+    #     patience=10,
+    #     mode="min"
+    # )
 
     # Trainer
     trainer = Trainer(
         max_epochs=num_epochs,
-        callbacks=[checkpoint_callback, early_stopping_callback],
+        #callbacks=[checkpoint_callback, early_stopping_callback],
+        callbacks = checkpoint_callback,
         accelerator="auto",  # Use GPU if available
     )
 
@@ -51,7 +52,7 @@ def main():
     trainer.fit(model, train_loader, val_loader)
 
     # Save the final model
-    torch.save(model.state_dict(), "autoencoder_final_64e100.pth")
+    torch.save(model.state_dict(), "./model/autoencoder_alldata_64e100.pth")
 
 if __name__ == "__main__":
     main()

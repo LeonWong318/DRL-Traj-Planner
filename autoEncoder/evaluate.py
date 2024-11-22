@@ -14,7 +14,7 @@ def load_model(model_path, base_channel_size, latent_dim, num_input_channels, wi
         width=width,
         height=height
     )
-    checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
+    checkpoint = torch.load(model_path, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu""cuda" if torch.cuda.is_available() else "cpu"))
     model.load_state_dict(checkpoint, strict=False)
     model.eval()  # Set model to evaluation mode
     return model
@@ -31,7 +31,7 @@ def evaluate_model(model, test_loader, num_samples=5):
     Returns:
         None
     """
-    device = torch.device("cpu")  # Ensure evaluation on CPU
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # Ensure evaluation on CPU
     model.to(device)
 
     # Compute reconstruction loss
@@ -74,13 +74,13 @@ def main():
     # Parameters
     base_path = "../test_data"  # Path to the dataset
     batch_size = 64        # Batch size for evaluation
-    model_path = "autoencoder_final_64e100.pth"  # Path to the trained model
-    latent_dim = 64      # Dimensionality of the latent space
+    model_path = "model/autoencoder_alldata_8e100.pth"  # Path to the trained model
+    latent_dim = 8      # Dimensionality of the latent space
     base_channel_size = 32 # Base number of channels in the encoder/decoder
     width, height, num_input_channels = 54, 54, 3  # Input dimensions
 
     # Create DataLoader for the test set
-    _, test_loader = create_dataloaders(base_path, batch_size=batch_size, train_split=0.8)
+    _, test_loader = create_dataloaders(base_path, batch_size=batch_size, train_split=0.1)
 
     # Load the model
     model = load_model(model_path, base_channel_size, latent_dim, num_input_channels, width, height)
