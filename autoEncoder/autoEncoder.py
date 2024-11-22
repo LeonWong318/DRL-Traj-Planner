@@ -41,7 +41,6 @@ class Encoder(nn.Module):
         return self.net(x)
 
 
-
 class Decoder(nn.Module):
     def __init__(self, num_input_channels, base_channel_size, latent_dim, act_fn=nn.GELU):
         super().__init__()
@@ -51,15 +50,17 @@ class Decoder(nn.Module):
             act_fn()
         )
         self.net = nn.Sequential(
-            nn.ConvTranspose2d(2 * c_hid, 2 * c_hid, kernel_size=3, output_padding=1, padding=1, stride=2),  # 7x7 -> 14x14
+            nn.ConvTranspose2d(2 * c_hid, 2 * c_hid, kernel_size=3, stride=2, padding=1, output_padding=1),  # 7x7 -> 14x14
             act_fn(),
             nn.Conv2d(2 * c_hid, 2 * c_hid, kernel_size=3, padding=1),
             act_fn(),
-            nn.ConvTranspose2d(2 * c_hid, c_hid, kernel_size=3, output_padding=1, padding=1, stride=2),  # 14x14 -> 27x27
+            nn.ConvTranspose2d(2 * c_hid, c_hid, kernel_size=3, stride=2, padding=1, output_padding=1),  # 14x14 -> 27x27
             act_fn(),
             nn.Conv2d(c_hid, c_hid, kernel_size=3, padding=1),
             act_fn(),
-            nn.ConvTranspose2d(c_hid, num_input_channels, kernel_size=3, output_padding=1, padding=1, stride=2),  # 27x27 -> 54x54
+            nn.ConvTranspose2d(c_hid, num_input_channels, kernel_size=3, stride=2, padding=1, output_padding=1),  # 27x27 -> 54x54
+            act_fn(),
+            nn.Conv2d(num_input_channels, num_input_channels, kernel_size=3, padding=1),  # Optionally adjust to change dimensions
             nn.Tanh()
         )
 
@@ -67,14 +68,10 @@ class Decoder(nn.Module):
         x = self.linear(x)
         x = x.reshape(x.shape[0], -1, 7, 7)
         x = self.net(x)
+        x = F.interpolate(x, size=(54, 54))  # Explicit resizing to 56x56
         return x
 # class Decoder(nn.Module):
-
-#     def __init__(self,
-#                  num_input_channels: int,
-#                  base_channel_size: int,
-#                  latent_dim: int,
-#                  act_fn: object = nn.GELU):
+#     def __init__(self, num_input_channels, base_channel_size, latent_dim, act_fn=nn.GELU):
 #         super().__init__()
 #         c_hid = base_channel_size
 #         self.linear = nn.Sequential(
@@ -99,6 +96,7 @@ class Decoder(nn.Module):
 #         x = x.reshape(x.shape[0], -1, 7, 7)
 #         x = self.net(x)
 #         return x
+
 
 
 class Autoencoder(pl.LightningModule):

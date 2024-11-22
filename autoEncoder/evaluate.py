@@ -72,10 +72,10 @@ def evaluate_model(model, test_loader, num_samples=5):
 
 def main():
     # Parameters
-    base_path = "../trial_data"  # Path to the dataset
+    base_path = "../test_data"  # Path to the dataset
     batch_size = 64        # Batch size for evaluation
-    model_path = "autoencoder_final.pth"  # Path to the trained model
-    latent_dim = 128       # Dimensionality of the latent space
+    model_path = "autoencoder_final_64e100.pth"  # Path to the trained model
+    latent_dim = 64      # Dimensionality of the latent space
     base_channel_size = 32 # Base number of channels in the encoder/decoder
     width, height, num_input_channels = 54, 54, 3  # Input dimensions
 
