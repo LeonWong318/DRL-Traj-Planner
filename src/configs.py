@@ -137,7 +137,7 @@ class BaseConfig(BaseModel):
     # env_name: str = "TrajectoryPlannerEnvironmentRaysReward3-v3"
     env_name: str = "TrajectoryPlannerEnvironmentImgsReward3-v0"
     reward_mode: Optional[str] = "sum"  # vals: sum, curriculum_step
-    map_key: str = "dynamic_convex_obstacle"
+    map_key: str = "eval"
     seed: int = 10  # 10, 100, 200
     collector_device: str = "cpu"
     device: str = "cpu"

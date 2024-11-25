@@ -135,7 +135,7 @@ def render_rollout(eval_env, model, config, n_steps=2_000, is_torchrl=True):
             action = model.model["policy"](state)
             next_state = eval_env.step(action)
             obs = next_state["pixels"]
-            auto_save(obs,"../data",steps)
+            auto_save(obs,"../test_data",steps)
             steps += 1
             ep_rwd += next_state['next']['reward']
 
