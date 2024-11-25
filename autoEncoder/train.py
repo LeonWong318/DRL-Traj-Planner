@@ -14,7 +14,7 @@ def parse_args():
 def main():
     # Parameters
     args = parse_args()
-    base_path = "../data"  # Path to the dataset
+    base_path = "../newdata"  # Path to the dataset
     batch_size = 64        # Batch size for training
     latent_dim = args.ld       # Dimensionality of the latent space
     base_channel_size = 32 # Base number of channels in the encoder/decoder

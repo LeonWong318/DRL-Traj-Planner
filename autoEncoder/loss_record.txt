@@ -1,4 +1,6 @@
 Initial architecture Reconstruction Loss:
-latent_dim=128: 798.3845
-latent_dim=64:  899.6959
-latent_dim=8:  1047.0889
+
+Based on all data:
+latent_dim=128: 673.3657
+latent_dim=64: 805.3400
+latent_dim=8: 2561.4567

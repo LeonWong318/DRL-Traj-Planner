@@ -1,7 +1,7 @@
 import torch
 import matplotlib.pyplot as plt
 from autoEncoder import Autoencoder
-from dataLoad import create_dataloaders
+from dataLoad import create_dataloaders, create_test_loader
 import os
 import re
 import glob
@@ -113,7 +113,7 @@ def main():
     width, height, num_input_channels = 54, 54, 3  # Input dimensions
 
     # Create DataLoader for the test set
-    _, test_loader = create_dataloaders(base_path, batch_size=batch_size, train_split=0.1)
+    test_loader = create_test_loader(base_path, batch_size=batch_size)
 
     # Load the model
     model = load_model(model_path, base_channel_size, latent_dim, num_input_channels, width, height)

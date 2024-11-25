@@ -77,7 +77,21 @@ def create_dataloaders(base_path, batch_size=32, train_split=0.8, shuffle=True):
 
     return train_loader, test_loader
 
+def create_test_loader(base_path, batch_size=32):
+    """
+    Create a DataLoader that uses all data for testing.
 
+    Args:
+        base_path (str): The base directory containing episode folders.
+        batch_size (int): Batch size for the DataLoader.
+
+    Returns:
+        DataLoader: DataLoader for the test dataset.
+    """
+    # Load the full dataset without splitting
+    dataset = EpisodeDataset(base_path)
+    test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+    return test_loader
 
 # # Example: Iterate through train_loader
 # for batch_idx, batch in enumerate(train_loader):
