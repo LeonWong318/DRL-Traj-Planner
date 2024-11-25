@@ -54,9 +54,36 @@ def display_nth_image_across_episodes(root_path, n):
         except Exception as e:
             print(f"Error processing files in {episode_path}: {e}")
 
+
+def display_each_channel_in_episode(episode_path):
+    """
+    Channel 1: Current occupancy grid.
+    Channel 2: Previous(5 step before) occupancy grid.
+    Channel 3: Distance field.
+    Func:
+        Plot each channel independently as heatmap.
+    """
+    pt_files = [file for file in os.listdir(episode_path) if file.endswith('.pt')]
+    pt_files.sort()
+    for pt_file in pt_files:
+        file_path = os.path.join(episode_path, pt_file)
+        tensor = torch.load(file_path)
+        for i in range(3):
+            plt.figure()
+            plt.imshow(tensor[i], cmap='hot')  
+            plt.title(f'Channel {i+1}')
+            plt.colorbar()
+            plt.show()
+        
+
+
+
+
 # Example Usage
 episode_number = 5  # 选择展示第5个episode的所有图片
-display_all_images_in_episode(os.path.join(root_path, f'Episode_{episode_number}'))
+# display_all_images_in_episode(os.path.join(root_path, f'Episode_{episode_number}'))
+
+display_each_channel_in_episode(os.path.join(root_path, f'Episode_{episode_number}'))
 
 # nth_image = 0  # 选择展示每个episode中的第1个图片
 # display_nth_image_across_episodes(root_path, nth_image)
