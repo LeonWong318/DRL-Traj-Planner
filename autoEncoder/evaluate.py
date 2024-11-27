@@ -1,6 +1,7 @@
 import torch
 import matplotlib.pyplot as plt
 from autoEncoder import Autoencoder
+from ResNet_based_autoEncoder import ResNetBasedAutoencoder
 from dataLoad import create_dataloaders, create_test_loader
 import os
 import re
@@ -27,17 +28,26 @@ def get_latest_model_path(base_path='model/'):
     # Return the most recent model file, or None if there are no files
     return os.path.basename(model_files[0]) if model_files else None
 
-def load_model(model_path, base_channel_size, latent_dim, num_input_channels, width, height):
+def load_model(model_path, base_channel_size, latent_dim, num_input_channels, width, height, arch_name):
     """
     Load the trained autoencoder model from a saved state.
     """
-    model = Autoencoder(
-        base_channel_size=base_channel_size,
-        latent_dim=latent_dim,
-        num_input_channels=num_input_channels,
-        width=width,
-        height=height
-    )
+    if arch_name == 'autoencoder':
+        model = Autoencoder(
+            base_channel_size=base_channel_size,
+            latent_dim=latent_dim,
+            num_input_channels=num_input_channels,
+            width=width,
+            height=height
+        )
+    elif arch_name == 'ResNet':
+        model = ResNetBasedAutoencoder(
+            base_channel_size=base_channel_size,
+            latent_dim=latent_dim,
+            num_input_channels=num_input_channels,
+            width=width,
+            height=height
+        )
     checkpoint = torch.load(model_path, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu""cuda" if torch.cuda.is_available() else "cpu"))
     model.load_state_dict(checkpoint, strict=False)
     model.eval()  # Set model to evaluation mode
@@ -97,8 +107,8 @@ def evaluate_model(model, test_loader, num_samples=5):
     
     # plot each channel independently
     for i in range(min(num_samples, len(batch))):
-        original_tensor = batch[i]
-        reconstructed_tensor = reconstructed[i]
+        original_tensor = batch[i].cpu().numpy()
+        reconstructed_tensor = reconstructed[i].cpu().numpy()
 
         fig, axes = plt.subplots(2, 3, figsize=(10, 7)) 
         
@@ -125,6 +135,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Evaluate model')
     parser.add_argument('--model', type=str, default=get_latest_model_path(), help='Dimensionality of the latent space')
     parser.add_argument('--ld', type=int, default=extract_latent_dim_from_filename(get_latest_model_path()), help='Number of epochs for training')
+    parser.add_argument('--arc', type=str, default='ResNet', help='The architecture you want to evaluate')
     return parser.parse_args()
 
 def main():
@@ -138,12 +149,12 @@ def main():
     latent_dim = args.ld      # Dimensionality of the latent space
     base_channel_size = 32 # Base number of channels in the encoder/decoder
     width, height, num_input_channels = 54, 54, 3  # Input dimensions
-
+    arch_name = args.arc
     # Create DataLoader for the test set
     test_loader = create_test_loader(base_path, batch_size=batch_size)
 
     # Load the model
-    model = load_model(model_path, base_channel_size, latent_dim, num_input_channels, width, height)
+    model = load_model(model_path, base_channel_size, latent_dim, num_input_channels, width, height, arch_name)
 
     # Evaluate the model
     evaluate_model(model, test_loader, num_samples=5)

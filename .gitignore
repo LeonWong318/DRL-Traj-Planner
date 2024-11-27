@@ -7,7 +7,7 @@
 .DS_Store
 .vscode/
 **/mpc_solver/
-
+*.ckpt
 runs/
 wandb/
 .idea/
