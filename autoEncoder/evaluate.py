@@ -97,8 +97,8 @@ def evaluate_model(model, test_loader, num_samples=5):
     
     # plot each channel independently
     for i in range(min(num_samples, len(batch))):
-        original_tensor = batch[i]
-        reconstructed_tensor = reconstructed[i]
+        original_tensor = batch[i].cpu().numpy()
+        reconstructed_tensor = reconstructed[i].cpu().numpy()
 
         fig, axes = plt.subplots(2, 3, figsize=(10, 7)) 
         
