@@ -96,7 +96,7 @@ def main():
     # Ensure x-axis shows only integers
     epochs = range(0, len(train_losses))
     plt.xticks(epochs)  # Set x-ticks to integers (0-based index)
-    plt.savefig(f'autoencoder_allnewdata_{latent_dim}e{num_epochs}_loss_curve_{timestamp}.png')
+    plt.savefig(f'./figure/autoencoder_allnewdata_{latent_dim}e{num_epochs}_loss_curve_{timestamp}.png')
     plt.show()
 
 if __name__ == "__main__":
