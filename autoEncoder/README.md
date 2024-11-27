@@ -17,3 +17,7 @@ or you want to alter the model and also provide latent dimension
 ```
 python evaluate.py --model your_model_name.pth --ld 64
 ```
+### To do list
+plot the training loss and val loss
+reconstruct the next time step rather than the current one
+Evaluate other architectures: VAE, ResNet based AE
