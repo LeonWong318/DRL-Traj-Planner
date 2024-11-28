@@ -4,7 +4,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, Callback
 import argparse
 import matplotlib.pyplot as plt
 from datetime import datetime
-
+from matplotlib.ticker import AutoLocator
 
 
 from autoEncoder import Autoencoder
@@ -107,6 +107,7 @@ def main():
     # Ensure x-axis shows only integers
     epochs = range(0, len(train_losses))
     plt.xticks(epochs)  # Set x-ticks to integers (0-based index)
+    plt.gca().xaxis.set_major_locator(AutoLocator())
     plt.savefig(f'./figure/{arch_name}_allnewdata_{latent_dim}e{num_epochs}_loss_curve_{timestamp}.png')
     plt.show()
 
