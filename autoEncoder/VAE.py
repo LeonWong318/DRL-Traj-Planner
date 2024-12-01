@@ -1,158 +1,132 @@
-# -*- coding: utf-8 -*-
-
-"""
-Created on Nov 27, 2024
-"""
-
-import os
-from tqdm import tqdm
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+from dataLoad import create_dataloaders
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
+import matplotlib.pyplot as plt
 
-from torchvision import transforms
-from torchvision.utils import save_image
-
-from dataLoad import create_dataloaders
-
-class ConvVAE(nn.Module):
-    def __init__(self, latent_size):
-        super(ConvVAE, self).__init__()
-
-        # Encoder
+class VAE(nn.Module):
+    def __init__(self, latent_dim=20):
+        super(VAE, self).__init__()
+        # 编码器
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1),  # 3x54x54 -> 32x27x27
+            nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1),  # Output size: (32, 27, 27)
+            nn.BatchNorm2d(32),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),  # 32x27x27 -> 64x13x13
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1), # Output size: (64, 13, 13)
+            nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.Flatten(start_dim=1, end_dim=-1),
-            nn.Linear(64 * 13 * 13, latent_size * 2)  # Adjust to match flattened size
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1), # Output size: (128, 6, 6)
+            nn.BatchNorm2d(128),
+            nn.ReLU()
         )
+        self.fc_mu = nn.Linear(128 * 6 * 6, latent_dim)
+        self.fc_logvar = nn.Linear(128 * 6 * 6, latent_dim)
 
-        # Decoder
+        # 解码器
+        self.decoder_input = nn.Linear(latent_dim, 128 * 6 * 6)
         self.decoder = nn.Sequential(
-            nn.Linear(latent_size, 64 * 13 * 13),  # Latent to flattened feature size
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),  # Output size: (64, 12, 12)
+            nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.Unflatten(1, (64, 13, 13)),  # Reshape back to conv output
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),  # 64x13x13 -> 32x27x27
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),   # Output size: (32, 24, 24)
+            nn.BatchNorm2d(32),
             nn.ReLU(),
-            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1),  # 32x27x27 -> 3x54x54
-            nn.Sigmoid()  # Scale to [0, 1]
+            nn.ConvTranspose2d(32, 3, kernel_size=10, stride=2, padding=1),   # Output size: (3, 54, 54)
+            nn.Sigmoid()
         )
-    
-    def encoder_forward(self, X):
-        out = self.encoder(X)
-        mu, log_var = torch.chunk(out, 2, dim=1)  # Split into mean and log variance
-        return mu, log_var
 
-    def decoder_forward(self, z):
-        return self.decoder(z)
+    def encode(self, x):
+        h = self.encoder(x)
+        # print(f"Encoder output shape: {h.shape}")
+        h = h.view(h.size(0), -1)
+        mu = self.fc_mu(h)
+        logvar = self.fc_logvar(h)
+        return mu, logvar
 
-    def reparameterization(self, mu, log_var):
-        epsilon = torch.randn_like(log_var)
-        z = mu + epsilon * torch.sqrt(log_var.exp())
-        return z
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return mu + eps * std
 
-    def loss(self, X, mu_prime, mu, log_var):
-        reconstruction_loss = torch.mean((X - mu_prime) ** 2)
-        latent_loss = torch.mean(0.5 * (log_var.exp() + mu**2 - 1 - log_var).sum(dim=1))
-        return reconstruction_loss + latent_loss
+    def decode(self, z):
+        h = self.decoder_input(z)
+        h = h.view(-1, 128, 6, 6)
+        h = self.decoder(h)
+        # print(f"Decoder output shape: {h.shape}")  # 应该输出 (batch_size, 3, 54, 54)
+        return h
 
-    def forward(self, X):
-        mu, log_var = self.encoder_forward(X)
-        z = self.reparameterization(mu, log_var)
-        mu_prime = self.decoder_forward(z)
-        return mu_prime, mu, log_var
+    def forward(self, x):
+        mu, logvar = self.encode(x)
+        z = self.reparameterize(mu, logvar)
+        recon_x = self.decode(z)
+        return recon_x, mu, logvar
+
+def loss_function(recon_x, x, mu, logvar, beta=1):
+    recon_loss = F.mse_loss(recon_x, x, reduction='mean')
+    kld_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    return recon_loss + beta * kld_loss
 
 
 
-# # Training loop
-# def train(model, optimizer, data_loader, device):
+# base_path = "../newdata"  # Path to your dataset
+# dataloader, val_loader = create_dataloaders(base_path, batch_size=32, train_split=0.8)
+
+# model = VAE(latent_dim=64)
+# optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# model.to(device)
+
+# num_epochs = 50
+# train_losses = []
+
+# for epoch in range(num_epochs):
 #     model.train()
-#     total_loss = 0
-#     pbar = tqdm(data_loader)
-#     for X, _ in pbar:
-#         X = X.to(device)
-#         model.zero_grad()
-
-#         mu_prime, mu, log_var = model(X)
-#         loss = model.loss(X, mu_prime, mu, log_var)
+#     train_loss = 0
+#     progress_bar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{num_epochs}, Training")
+#     for x in progress_bar:
+#         x = x.to(device)
+#         optimizer.zero_grad()
+#         recon_x, mu, logvar = model(x)
+#         loss = loss_function(recon_x, x, mu, logvar)
 #         loss.backward()
 #         optimizer.step()
+#         train_loss += loss.item()
+#         progress_bar.set_postfix(loss=f"{loss.item():.4f}")
 
-#         total_loss += loss.item()
-#         pbar.set_description(f"Loss: {loss.item():.4f}")
-#     return total_loss / len(data_loader)
+#     train_loss /= len(dataloader.dataset)
+#     train_losses.append(train_loss)
 
-def train(model, optimizer, data_loader, device):
-    model.train()
-    total_loss = 0
-    pbar = tqdm(data_loader)
+#     # 验证阶段
+#     model.eval()
+#     val_loss = 0
+#     val_progress_bar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{num_epochs}, Validation")
+#     with torch.no_grad():
+#         for x in val_progress_bar:
+#             x = x.to(device)
+#             recon_x, mu, logvar = model(x)
+#             loss = loss_function(recon_x, x, mu, logvar)
+#             val_loss += loss.item()
+#             val_progress_bar.set_postfix(val_loss=f"{loss.item():.4f}")
 
-    for batch in pbar:
-        X = batch[0]  # Ignore labels, only take images
-        X = X.to(device)
-        model.zero_grad()
+#     val_loss /= len(val_loader.dataset)
 
-        # Forward pass
-        mu_prime, mu, log_var = model(X)
-
-        # Compute loss
-        loss = model.loss(X, mu_prime, mu, log_var)
-        loss.backward()
-        optimizer.step()
-
-        total_loss += loss.item()
-        pbar.set_description(f"Loss: {loss.item():.4f}")
-    
-    return total_loss / len(data_loader)
+#     print(f"Epoch {epoch+1}, Training Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}")
 
 
+# torch.save(model.state_dict(), 'vae_model.pth')
+# print("Model saved as vae_model.pth")
 
 
-@torch.no_grad()
-def save_results(model, latent_size, device, save_path='./img/vae_samples.png'):
-    z = torch.randn(100, latent_size).to(device)
-    out = model.decoder_forward(z)
-    save_image(out.view(-1, 3, 54, 54), save_path, nrow=10, normalize=True)
+# plt.figure(figsize=(10,5))
+# plt.plot(range(1, num_epochs+1), train_losses, marker='o')
+# plt.title('Training Loss')
+# plt.xlabel('Epoch')
+# plt.ylabel('Loss')
+# plt.grid(True)
+# plt.savefig("vae_train_loss.png")
+# plt.show()
 
-
-# Main function
-def main():
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    device = torch.device(device)
-
-    # Hyperparameters
-    base_path = "../newdata"  # Path to your dataset
-    batch_size = 64
-    epochs = 50
-    latent_size = 64
-    lr = 0.001
-
-    # Create dataloaders
-    train_loader, val_loader = create_dataloaders(base_path, batch_size=batch_size, train_split=0.8)
-    for batch in train_loader:
-        print(f"Batch shape: {batch.shape}")  # Should print [batch_size, 3, 54, 54]
-        break
-    
-    
-    # Initialize model and optimizer
-    model = ConvVAE(latent_size).to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
-
-    # Training loop
-    print("Start Training...")
-    for epoch in range(1, epochs + 1):
-        avg_loss = train(model, optimizer, train_loader, device)
-        print(f"Epoch: {epoch}, AvgLoss: {avg_loss:.4f}")
-    print("Training complete.")
-
-    # Save results
-    os.makedirs('./img', exist_ok=True)
-    save_results(model, latent_size, device)
-    print("Sample images saved to './img/vae_samples.png'")
-
-
-if __name__ == '__main__':
-    main()
