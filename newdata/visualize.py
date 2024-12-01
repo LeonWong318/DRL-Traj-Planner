@@ -80,7 +80,7 @@ def display_each_channel_in_episode(episode_path):
 
 
 # Example Usage
-episode_number = 5  # 选择展示第5个episode的所有图片
+episode_number = 70  # 选择展示第5个episode的所有图片
 # display_all_images_in_episode(os.path.join(root_path, f'Episode_{episode_number}'))
 
 display_each_channel_in_episode(os.path.join(root_path, f'Episode_{episode_number}'))
