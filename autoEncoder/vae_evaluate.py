@@ -6,9 +6,9 @@ import torch.nn.functional as F
 from dataLoad import create_test_loader
 
 # 加载模型
-model = VAE(latent_dim=64)
+model = VAE(latent_dim=128)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model.load_state_dict(torch.load('vae_model.pth', map_location=device))
+model.load_state_dict(torch.load('vae_model_128.pth', map_location=device))
 model.to(device)
 model.eval()
 
@@ -18,30 +18,6 @@ base_path = "../newdata"
 batch_size = 32
 test_loader = create_test_loader(base_path, batch_size=batch_size)
 
-# 测试一批数据
-# data = next(iter(test_loader))
-# data = data.to(device)  # 确保数据也在正确的设备上
-# with torch.no_grad():
-#     reconstructed, _, _ = model(data)
-
-# 绘制原始图像和重建图像
-# fig, axes = plt.subplots(nrows=2, ncols=5, figsize=(10, 4))
-# for i in range(5):
-#     # 显示原始图像
-#     ax = axes[0, i]
-#     original_img = data[i].cpu().permute(1, 2, 0)  # 移动到CPU并调整通道位置
-#     ax.imshow(original_img)
-#     ax.axis('off')
-#     ax.set_title('Original')
-
-#     # 显示重建图像
-#     ax = axes[1, i]
-#     reconstructed_img = reconstructed[i].cpu().permute(1, 2, 0)  # 移动到CPU并调整通道位置
-#     ax.imshow(reconstructed_img)
-#     ax.axis('off')
-#     ax.set_title('Reconstructed')
-
-# plt.show()
 
 test_iter = iter(test_loader)
 batch = next(test_iter).to(device)
@@ -51,7 +27,24 @@ with torch.no_grad():
     
 # plot each channel independently
 num_samples = 10
-for i in range(min(num_samples, len(batch))):
+
+
+# Select a few samples to visualize
+for i in range(min(num_samples, batch.size(0))):
+    plt.figure(figsize=(6, 3))
+    # Original image
+    plt.subplot(1, 2, 1)
+    plt.title("Original")
+    plt.imshow(batch[i].permute(1, 2, 0).cpu().numpy())
+    plt.axis("off")
+    # Reconstructed image
+    plt.subplot(1, 2, 2)
+    plt.title("Reconstructed")
+    plt.imshow(reconstructed[i].permute(1, 2, 0).cpu().numpy())
+    plt.axis("off")
+    plt.show()
+
+# for i in range(min(num_samples, len(batch))):
     original_tensor = batch[i].cpu().numpy()
     reconstructed_tensor = reconstructed[i].cpu().numpy()
 

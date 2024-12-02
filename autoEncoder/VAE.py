@@ -8,8 +8,9 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 class VAE(nn.Module):
-    def __init__(self, latent_dim=20):
+    def __init__(self, latent_dim=64):
         super(VAE, self).__init__()
+        # self.beta = nn.Parameter(torch.tensor(1.0, requires_grad=False))
         # 编码器
         self.encoder = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1),  # Output size: (32, 27, 27)
@@ -64,10 +65,13 @@ class VAE(nn.Module):
         recon_x = self.decode(z)
         return recon_x, mu, logvar
 
-def loss_function(recon_x, x, mu, logvar, beta=1):
-    recon_loss = F.mse_loss(recon_x, x, reduction='mean')
+def loss_function(recon_x, x, mu, logvar, beta = 1):
+    recon_loss = F.mse_loss(recon_x, x, reduction="none")
+    recon_loss = recon_loss.sum(dim=[1, 2, 3]).mean(dim=0)
+    # recon_loss = F.mse_loss(recon_x, x, reduction="mean")
     kld_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-    return recon_loss + beta * kld_loss
+    # kld_loss = F.kldiv(logvar, mu, )
+    return recon_loss + beta * kld_loss, recon_loss
 
 
 
@@ -80,44 +84,52 @@ def loss_function(recon_x, x, mu, logvar, beta=1):
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # model.to(device)
 
-# num_epochs = 50
+# num_epochs = 10
 # train_losses = []
-
+# train_recon_losses = []
 # for epoch in range(num_epochs):
 #     model.train()
 #     train_loss = 0
+#     train_recon_loss = 0
 #     progress_bar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{num_epochs}, Training")
 #     for x in progress_bar:
 #         x = x.to(device)
 #         optimizer.zero_grad()
 #         recon_x, mu, logvar = model(x)
-#         loss = loss_function(recon_x, x, mu, logvar)
+#         loss, recon_loss = loss_function(recon_x, x, mu, logvar)
 #         loss.backward()
 #         optimizer.step()
 #         train_loss += loss.item()
-#         progress_bar.set_postfix(loss=f"{loss.item():.4f}")
+#         train_recon_loss += recon_loss.item()
+#         progress_bar.set_postfix(loss=f"{recon_loss.item():.4f}")   #only print reconstruction loss no kl loss
 
 #     train_loss /= len(dataloader.dataset)
 #     train_losses.append(train_loss)
 
+#     train_recon_loss /= len(dataloader.dataset)
+#     train_recon_losses.append(train_recon_loss)
+
 #     # 验证阶段
 #     model.eval()
 #     val_loss = 0
+#     val_recon_loss = 0
 #     val_progress_bar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{num_epochs}, Validation")
 #     with torch.no_grad():
 #         for x in val_progress_bar:
 #             x = x.to(device)
 #             recon_x, mu, logvar = model(x)
-#             loss = loss_function(recon_x, x, mu, logvar)
+#             loss, recon_loss = loss_function(recon_x, x, mu, logvar)
 #             val_loss += loss.item()
-#             val_progress_bar.set_postfix(val_loss=f"{loss.item():.4f}")
+#             val_recon_loss += recon_loss.item()
+#             val_progress_bar.set_postfix(val_loss=f"{recon_loss.item():.4f}")
 
 #     val_loss /= len(val_loader.dataset)
+#     val_recon_loss /= len(val_loader.dataset)
+#     print(train_loss - train_recon_loss)
+#     print(f"Epoch {epoch+1}, Training Loss: {train_recon_loss:.4f}, Validation Loss: {val_recon_loss:.4f}")
 
-#     print(f"Epoch {epoch+1}, Training Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}")
 
-
-# torch.save(model.state_dict(), 'vae_model.pth')
+# torch.save(model.state_dict(), 'vae_model_64e10mean.pth')
 # print("Model saved as vae_model.pth")
 
 
@@ -127,6 +139,6 @@ def loss_function(recon_x, x, mu, logvar, beta=1):
 # plt.xlabel('Epoch')
 # plt.ylabel('Loss')
 # plt.grid(True)
-# plt.savefig("vae_train_loss.png")
+# plt.savefig("vae_train_loss_64e10mean.png")
 # plt.show()
 

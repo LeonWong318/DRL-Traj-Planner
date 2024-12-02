@@ -90,19 +90,19 @@ def evaluate_model(model, test_loader, num_samples=5):
         reconstructed = model(batch)
 
     # Select a few samples to visualize
-    # for i in range(min(num_samples, batch.size(0))):
-    #     plt.figure(figsize=(6, 3))
-    #     # Original image
-    #     plt.subplot(1, 2, 1)
-    #     plt.title("Original")
-    #     plt.imshow(batch[i].permute(1, 2, 0).cpu().numpy())
-    #     plt.axis("off")
-    #     # Reconstructed image
-    #     plt.subplot(1, 2, 2)
-    #     plt.title("Reconstructed")
-    #     plt.imshow(reconstructed[i].permute(1, 2, 0).cpu().numpy())
-    #     plt.axis("off")
-    #     plt.show()
+    for i in range(min(num_samples, batch.size(0))):
+        plt.figure(figsize=(6, 3))
+        # Original image
+        plt.subplot(1, 2, 1)
+        plt.title("Original")
+        plt.imshow(batch[i].permute(1, 2, 0).cpu().numpy())
+        plt.axis("off")
+        # Reconstructed image
+        plt.subplot(1, 2, 2)
+        plt.title("Reconstructed")
+        plt.imshow(reconstructed[i].permute(1, 2, 0).cpu().numpy())
+        plt.axis("off")
+        plt.show()
     
     
     # plot each channel independently
