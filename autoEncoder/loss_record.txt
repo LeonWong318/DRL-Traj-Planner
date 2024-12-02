@@ -1,6 +1,6 @@
 Initial architecture Reconstruction Loss:
 
-Based on all data:
+CNN-based Reconstruction Loss:
 latent_dim=128: 673.3657
 latent_dim=64: 805.3400
 latent_dim=8: 2561.4567
@@ -9,3 +9,14 @@ ResNet based Reconstruction Loss:
 latent_dim=128: 1083.1039
 latent_dim=64: 1111.5894
 latent_dim=8: 2505.4061
+
+Parameters:
+CNN-based:
+latent_dim=128: 1,011,095
+latent_dim=64: 609,623
+latent_dim=8: 258,335
+
+ResNet18 based:
+latent_dim=128: 11,945,847
+latent_dim=64: 11,614,007
+latent_dim=8: 11,323,647

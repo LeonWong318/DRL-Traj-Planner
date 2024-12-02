@@ -160,3 +160,25 @@ class Autoencoder(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         loss = self._get_reconstruction_loss(batch)
         self.log('test_loss', loss)
+
+
+# base_path = "../newdata"  # Path to the dataset
+# batch_size = 64        # Batch size for training
+# latent_dim = 8       # Dimensionality of the latent space
+# base_channel_size = 32 # Base number of channels in the encoder/decoder
+# num_epochs = 100        # Number of epochs to train
+# width, height, num_input_channels = 54, 54, 3  # Updated dimensions for input
+
+
+
+# # Initialize the model
+    
+# model = Autoencoder(
+#     base_channel_size=base_channel_size,
+#     latent_dim=latent_dim,
+#     num_input_channels=num_input_channels,
+#     width=width,
+#     height=height
+#     )
+# total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+# print(f"Total parameters: {total_params}")
