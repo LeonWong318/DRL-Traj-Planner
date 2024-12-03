@@ -3,7 +3,8 @@ Reconstruction Loss:
 CNN-based Reconstruction Loss:
 latent_dim=128: 575.4380
 latent_dim=64: 721.1338
-latent_dim=8: 2561.4567
+latent_dim=8: 2901.2219
+latent_dim=8 200 epochs: 2540.3429
 
 ResNet based Reconstruction Loss:
 latent_dim=128: 1083.1039
