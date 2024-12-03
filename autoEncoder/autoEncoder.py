@@ -13,25 +13,29 @@ import torch.optim as optim
 
 import pytorch_lightning as pl
 
-class Encoder(nn.Module):
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
-    def __init__(self,
-                 num_input_channels: int,
-                 base_channel_size: int,
-                 latent_dim: int,
-                 act_fn: object = nn.GELU):
+class Encoder(nn.Module):
+    def __init__(self, num_input_channels: int, base_channel_size: int, latent_dim: int, act_fn: object = nn.GELU):
         super().__init__()
         c_hid = base_channel_size
         self.net = nn.Sequential(
             nn.Conv2d(num_input_channels, c_hid, kernel_size=3, padding=1, stride=2),  # 54x54 -> 27x27
+            nn.BatchNorm2d(c_hid),
             act_fn(),
             nn.Conv2d(c_hid, c_hid, kernel_size=3, padding=1),
+            nn.BatchNorm2d(c_hid),
             act_fn(),
             nn.Conv2d(c_hid, 2 * c_hid, kernel_size=3, padding=1, stride=2),  # 27x27 -> 14x14
+            nn.BatchNorm2d(2 * c_hid),
             act_fn(),
             nn.Conv2d(2 * c_hid, 2 * c_hid, kernel_size=3, padding=1),
+            nn.BatchNorm2d(2 * c_hid),
             act_fn(),
             nn.Conv2d(2 * c_hid, 2 * c_hid, kernel_size=3, padding=1, stride=2),  # 14x14 -> 7x7
+            nn.BatchNorm2d(2 * c_hid),
             act_fn(),
             nn.Flatten(),  # Convert to a single feature vector
             nn.Linear(2 * 7 * 7 * c_hid, latent_dim)
@@ -42,7 +46,7 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, num_input_channels, base_channel_size, latent_dim, act_fn=nn.GELU):
+    def __init__(self, num_input_channels: int, base_channel_size: int, latent_dim: int, act_fn=nn.GELU):
         super().__init__()
         c_hid = base_channel_size
         self.linear = nn.Sequential(
@@ -51,14 +55,19 @@ class Decoder(nn.Module):
         )
         self.net = nn.Sequential(
             nn.ConvTranspose2d(2 * c_hid, 2 * c_hid, kernel_size=3, stride=2, padding=1, output_padding=1),  # 7x7 -> 14x14
+            nn.BatchNorm2d(2 * c_hid),
             act_fn(),
             nn.Conv2d(2 * c_hid, 2 * c_hid, kernel_size=3, padding=1),
+            nn.BatchNorm2d(2 * c_hid),
             act_fn(),
             nn.ConvTranspose2d(2 * c_hid, c_hid, kernel_size=3, stride=2, padding=1, output_padding=1),  # 14x14 -> 27x27
+            nn.BatchNorm2d(c_hid),
             act_fn(),
             nn.Conv2d(c_hid, c_hid, kernel_size=3, padding=1),
+            nn.BatchNorm2d(c_hid),
             act_fn(),
             nn.ConvTranspose2d(c_hid, num_input_channels, kernel_size=3, stride=2, padding=1, output_padding=1),  # 27x27 -> 54x54
+            nn.BatchNorm2d(num_input_channels),
             act_fn(),
             nn.Conv2d(num_input_channels, num_input_channels, kernel_size=3, padding=1),  # Optionally adjust to change dimensions
             nn.Tanh()
@@ -68,8 +77,9 @@ class Decoder(nn.Module):
         x = self.linear(x)
         x = x.reshape(x.shape[0], -1, 7, 7)
         x = self.net(x)
-        x = F.interpolate(x, size=(54, 54))  # Explicit resizing to 56x56
+        x = F.interpolate(x, size=(54, 54))  # Explicit resizing to 54x54
         return x
+
 # class Decoder(nn.Module):
 #     def __init__(self, num_input_channels, base_channel_size, latent_dim, act_fn=nn.GELU):
 #         super().__init__()

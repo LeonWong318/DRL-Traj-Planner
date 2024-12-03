@@ -9,6 +9,7 @@ from matplotlib.ticker import AutoLocator
 
 from autoEncoder import Autoencoder
 from ResNet_based_autoEncoder import ResNetBasedAutoencoder
+from VAE import VAE
 from dataLoad import create_dataloaders
 
 # To store the loss
@@ -29,7 +30,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train a simple model')
     parser.add_argument('--ld', type=int, default=128, help='Dimensionality of the latent space')
     parser.add_argument('--e', type=int, default=100, help='Number of epochs for training')
-    parser.add_argument('--arc', type=str, default='ResNet', help='The architecture you want to train')
+    parser.add_argument('--arc', type=str, default='VAE', help='The architecture you want to train')
     return parser.parse_args()
 
 def main():
@@ -56,6 +57,14 @@ def main():
         )
     elif arch_name == 'ResNet':
         model = ResNetBasedAutoencoder(
+            base_channel_size=base_channel_size,
+            latent_dim=latent_dim,
+            num_input_channels=num_input_channels,
+            width=width,
+            height=height
+        )
+    elif arch_name == 'VAE':
+        model = VAE(
             base_channel_size=base_channel_size,
             latent_dim=latent_dim,
             num_input_channels=num_input_channels,

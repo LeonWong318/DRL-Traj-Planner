@@ -4,45 +4,62 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
+import torch.optim as optim
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+import pytorch_lightning as pl
 
-class VAE(nn.Module):
-    def __init__(self, latent_dim=64):
+class VAE(pl.LightningModule):
+    def __init__(self, 
+                 base_channel_size: int, 
+                 latent_dim: int, 
+                 num_input_channels: int = 3, 
+                 width: int = 32, 
+                 height: int = 32):
         super(VAE, self).__init__()
-        # self.beta = nn.Parameter(torch.tensor(1.0, requires_grad=False))
-        # 编码器
+
+        self.latent_dim = latent_dim
+        self.base_channel_size = base_channel_size
+        self.num_input_channels = num_input_channels
+        self.width = width
+        self.height = height
+
+        # Encoder
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1),  # Output size: (32, 27, 27)
-            nn.BatchNorm2d(32),
+            nn.Conv2d(num_input_channels, base_channel_size, kernel_size=4, stride=2, padding=1),  # Downsample
+            nn.BatchNorm2d(base_channel_size),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1), # Output size: (64, 13, 13)
-            nn.BatchNorm2d(64),
+            nn.Conv2d(base_channel_size, base_channel_size * 2, kernel_size=4, stride=2, padding=1),  # Downsample
+            nn.BatchNorm2d(base_channel_size * 2),
             nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1), # Output size: (128, 6, 6)
-            nn.BatchNorm2d(128),
+            nn.Conv2d(base_channel_size * 2, base_channel_size * 4, kernel_size=4, stride=2, padding=1),  # Downsample
+            nn.BatchNorm2d(base_channel_size * 4),
             nn.ReLU()
         )
-        self.fc_mu = nn.Linear(128 * 6 * 6, latent_dim)
-        self.fc_logvar = nn.Linear(128 * 6 * 6, latent_dim)
 
-        # 解码器
-        self.decoder_input = nn.Linear(latent_dim, 128 * 6 * 6)
+        # Flattened dimension after the encoder
+        flattened_dim = (width // 8) * (height // 8) * (base_channel_size * 4)
+
+        # Latent space
+        self.fc_mu = nn.Linear(flattened_dim, latent_dim)
+        self.fc_logvar = nn.Linear(flattened_dim, latent_dim)
+
+        # Decoder
+        self.decoder_input = nn.Linear(latent_dim, flattened_dim)
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),  # Output size: (64, 12, 12)
-            nn.BatchNorm2d(64),
+            nn.ConvTranspose2d(base_channel_size * 4, base_channel_size * 2, kernel_size=4, stride=2, padding=1),  # Upsample
+            nn.BatchNorm2d(base_channel_size * 2),
             nn.ReLU(),
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),   # Output size: (32, 24, 24)
-            nn.BatchNorm2d(32),
+            nn.ConvTranspose2d(base_channel_size * 2, base_channel_size, kernel_size=4, stride=2, padding=1),  # Upsample
+            nn.BatchNorm2d(base_channel_size),
             nn.ReLU(),
-            nn.ConvTranspose2d(32, 3, kernel_size=10, stride=2, padding=1),   # Output size: (3, 54, 54)
+            nn.ConvTranspose2d(base_channel_size, num_input_channels, kernel_size=4, stride=2, padding=1),  # Upsample
             nn.Sigmoid()
         )
 
     def encode(self, x):
         h = self.encoder(x)
-        # print(f"Encoder output shape: {h.shape}")
-        h = h.view(h.size(0), -1)
+        h = h.view(h.size(0), -1)  # Flatten
         mu = self.fc_mu(h)
         logvar = self.fc_logvar(h)
         return mu, logvar
@@ -54,24 +71,47 @@ class VAE(nn.Module):
 
     def decode(self, z):
         h = self.decoder_input(z)
-        h = h.view(-1, 128, 6, 6)
+        h = h.view(h.size(0), self.base_channel_size * 4, self.width // 8, self.height // 8)
         h = self.decoder(h)
-        # print(f"Decoder output shape: {h.shape}")  # 应该输出 (batch_size, 3, 54, 54)
+        # Explicitly resize to match input size
+        h = F.interpolate(h, size=(self.height, self.width), mode="bilinear", align_corners=False)
         return h
+
 
     def forward(self, x):
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
         recon_x = self.decode(z)
         return recon_x, mu, logvar
+    
+    
+    def _get_reconstruction_loss(self, batch):
+        """
+        Calculate the reconstruction loss (MSE).
+        """
+        x = batch  # Assuming batch contains only images
+        recon_x, _, _ = self(x)
+        loss = F.mse_loss(recon_x, x, reduction="sum")
+        return loss
 
-def loss_function(recon_x, x, mu, logvar, beta = 1):
-    recon_loss = F.mse_loss(recon_x, x, reduction="none")
-    recon_loss = recon_loss.sum(dim=[1, 2, 3]).mean(dim=0)
-    # recon_loss = F.mse_loss(recon_x, x, reduction="mean")
-    kld_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-    # kld_loss = F.kldiv(logvar, mu, )
-    return recon_loss + beta * kld_loss, recon_loss
+    def configure_optimizers(self):
+        optimizer = optim.Adam(self.parameters(), lr=1e-3)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=10, min_lr=1e-5)
+        return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss"}
+
+    def training_step(self, batch, batch_idx):
+        loss = self._get_reconstruction_loss(batch)
+        self.log('train_loss', loss, prog_bar=True)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        loss = self._get_reconstruction_loss(batch)
+        self.log('val_loss', loss, prog_bar=True)
+
+    def test_step(self, batch, batch_idx):
+        loss = self._get_reconstruction_loss(batch)
+        self.log('test_loss', loss)
+
 
 
 
@@ -142,3 +182,17 @@ def loss_function(recon_x, x, mu, logvar, beta = 1):
 # plt.savefig("vae_train_loss_64e10mean.png")
 # plt.show()
 
+# base_path = "../newdata"  # Path to the dataset
+# batch_size = 64        # Batch size for training
+# latent_dim = 8       # Dimensionality of the latent space
+# base_channel_size = 32 # Base number of channels in the encoder/decoder
+# num_epochs = 100        # Number of epochs to train
+# width, height, num_input_channels = 54, 54, 3  # Updated dimensions for input
+
+
+
+# # Initialize the model
+    
+# model = VAE(latent_dim)
+# total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+# print(f"Total parameters: {total_params}")

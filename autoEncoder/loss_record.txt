@@ -1,7 +1,7 @@
-Initial architecture Reconstruction Loss:
+Reconstruction Loss:
 
 CNN-based Reconstruction Loss:
-latent_dim=128: 673.3657
+latent_dim=128: 575.4380
 latent_dim=64: 805.3400
 latent_dim=8: 2561.4567
 
@@ -11,7 +11,6 @@ latent_dim=64: 1111.5894
 latent_dim=8: 2505.4061
 latent_dim=128,200 epochs: 1118.9155
 
-<<<<<<< HEAD
 VAE
 latent_dim = 128, Epoch = 200, Training Loss: 159.0557, Validation Loss: 161.1982
 latent_dim = 64, Epoch = 50, Training Loss: 162.7855, Validation Loss: 164.4252
@@ -27,4 +26,9 @@ ResNet18 based:
 latent_dim=128: 11,945,847
 latent_dim=64: 11,614,007
 latent_dim=8: 11,323,647
->>>>>>> 9052abc5b1467c4ba3127f166bbfd17144851927
+
+VAE:
+latent_dim=128: 2,114,115
+latent_dim=64: 1,229,251
+latent_dim=8: 454,995
+

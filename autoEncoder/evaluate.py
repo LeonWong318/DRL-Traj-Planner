@@ -2,6 +2,7 @@ import torch
 import matplotlib.pyplot as plt
 from autoEncoder import Autoencoder
 from ResNet_based_autoEncoder import ResNetBasedAutoencoder
+from VAE import VAE
 from dataLoad import create_dataloaders, create_test_loader
 import os
 import re
@@ -48,12 +49,20 @@ def load_model(model_path, base_channel_size, latent_dim, num_input_channels, wi
             width=width,
             height=height
         )
+    elif arch_name == 'VAE':
+        model = VAE(
+            base_channel_size=base_channel_size,
+            latent_dim=latent_dim,
+            num_input_channels=num_input_channels,
+            width=width,
+            height=height
+        )
     checkpoint = torch.load(model_path, map_location=torch.device("cuda" if torch.cuda.is_available() else "cpu""cuda" if torch.cuda.is_available() else "cpu"))
     model.load_state_dict(checkpoint, strict=False)
     model.eval()  # Set model to evaluation mode
     return model
 
-def evaluate_model(model, test_loader, num_samples=5):
+def evaluate_model(model, test_loader, num_samples=5, arch_name='VAE'):
     """
     Evaluate the model on the test dataset.
 
@@ -75,7 +84,13 @@ def evaluate_model(model, test_loader, num_samples=5):
         batch = batch.to(device)
         with torch.no_grad():
             reconstructed = model(batch)
+            
+            if arch_name == 'VAE':
+                reconstructed = reconstructed[0]
+                
             loss = torch.nn.functional.mse_loss(batch, reconstructed, reduction="sum")
+            # if arch_name == 'VAE':
+            #     loss = torch.nn.functional.mse_loss(batch, reconstructed, reduction="mean")
             total_loss += loss.item()
         num_batches += 1
     average_loss = total_loss / len(test_loader.dataset)
@@ -88,21 +103,23 @@ def evaluate_model(model, test_loader, num_samples=5):
 
     with torch.no_grad():
         reconstructed = model(batch)
+    if arch_name == 'VAE':
+        reconstructed = reconstructed[0]
 
     # Select a few samples to visualize
-    for i in range(min(num_samples, batch.size(0))):
-        plt.figure(figsize=(6, 3))
-        # Original image
-        plt.subplot(1, 2, 1)
-        plt.title("Original")
-        plt.imshow(batch[i].permute(1, 2, 0).cpu().numpy())
-        plt.axis("off")
-        # Reconstructed image
-        plt.subplot(1, 2, 2)
-        plt.title("Reconstructed")
-        plt.imshow(reconstructed[i].permute(1, 2, 0).cpu().numpy())
-        plt.axis("off")
-        plt.show()
+    # for i in range(min(num_samples, batch.size(0))):
+    #     plt.figure(figsize=(6, 3))
+    #     # Original image
+    #     plt.subplot(1, 2, 1)
+    #     plt.title("Original")
+    #     plt.imshow(batch[i].permute(1, 2, 0).cpu().numpy())
+    #     plt.axis("off")
+    #     # Reconstructed image
+    #     plt.subplot(1, 2, 2)
+    #     plt.title("Reconstructed")
+    #     plt.imshow(reconstructed[i].permute(1, 2, 0).cpu().numpy())
+    #     plt.axis("off")
+    #     plt.show()
     
     
     # plot each channel independently
@@ -135,7 +152,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Evaluate model')
     parser.add_argument('--model', type=str, default=get_latest_model_path(), help='Dimensionality of the latent space')
     parser.add_argument('--ld', type=int, default=extract_latent_dim_from_filename(get_latest_model_path()), help='Number of epochs for training')
-    parser.add_argument('--arc', type=str, default='ResNet', help='The architecture you want to evaluate')
+    parser.add_argument('--arc', type=str, default='VAE', help='The architecture you want to evaluate')
     return parser.parse_args()
 
 def main():
@@ -157,7 +174,7 @@ def main():
     model = load_model(model_path, base_channel_size, latent_dim, num_input_channels, width, height, arch_name)
 
     # Evaluate the model
-    evaluate_model(model, test_loader, num_samples=5)
+    evaluate_model(model, test_loader, num_samples=5, arch_name=arch_name)
 
 if __name__ == "__main__":
     main()
