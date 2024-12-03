@@ -69,6 +69,7 @@ def display_each_channel_in_episode(episode_path):
         file_path = os.path.join(episode_path, pt_file)
         tensor = torch.load(file_path)
         for i in range(3):
+            print(f"Chanel{i}: {tensor[i]}")
             plt.figure()
             plt.imshow(tensor[i], cmap='hot')  
             plt.title(f'Channel {i+1}')
