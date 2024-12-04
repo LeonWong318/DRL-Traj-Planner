@@ -112,7 +112,7 @@ def make_env(config, max_eps_steps=None, **kwargs):
         reader = default_info_dict_reader(["success", "collided", "full_reward", "base_reward", "true_reward", "reward_tensor"])
         t_env.set_info_dict_reader(info_dict_reader=reader)
         return t_env
-
+    
     if config.n_envs == 1:
         env = make_t_env()
     else:

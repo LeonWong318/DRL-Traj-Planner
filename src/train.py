@@ -73,6 +73,7 @@ def run():
         wandb.config["map"] = generate_map.__name__
 
     # train model
+    # model.to(torch.device('cuda'))
     model.train(use_wandb=config.use_wandb)
     model.save(f"{path}/final_model.pth")
     logging.info(f"Final model saved to {path}")

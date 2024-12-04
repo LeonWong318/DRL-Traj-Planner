@@ -56,7 +56,7 @@ class RLConfig(BaseModel):
     loss_function: str = "smooth_l1"
 
     # shared parameters
-    replay_buffer_size: int = 800_000 # NOTE this cannot be 1_000_000 cause the the ser
+    replay_buffer_size: int = 100_000 # NOTE this cannot be 1_000_000 cause the the ser
     prioritize: bool = False
     batch_size: int = 128
     utd_ratio: float = 1.0
@@ -139,11 +139,11 @@ class BaseConfig(BaseModel):
     reward_mode: Optional[str] = "sum"  # vals: sum, curriculum_step
     map_key: str = "eval"
     seed: int = 10  # 10, 100, 200
-    collector_device: str = "cpu"    #cpu before
-    device: str = "cpu"
+    collector_device: str = "cuda"    #cpu before
+    device: str = "cuda"
     use_vec_norm: bool = False
     n_envs: int = 1
-    use_wandb: bool = True
+    use_wandb: bool = False
 
     w1: float = 0.1  # speed
     w2: float = 0.1  # acceleration
