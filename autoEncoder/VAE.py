@@ -91,7 +91,8 @@ class VAE(pl.LightningModule):
         """
         x = batch  # Assuming batch contains only images
         recon_x, _, _ = self(x)
-        loss = F.mse_loss(recon_x, x, reduction="sum")
+        loss = F.mse_loss(recon_x, x, reduction="none")
+        loss = loss.sum(dim=[1, 2, 3]).mean(dim=0)
         return loss
 
     def configure_optimizers(self):

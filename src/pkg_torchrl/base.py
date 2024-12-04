@@ -21,7 +21,7 @@ from .utils import get_activation, make_collector, make_replay_buffer, reset_act
 class ActorSequential(nn.Module):
     def __init__(self, feature, actor_mlp, actor_extractor):
         super().__init__()
-        self.feature = feature
+        self.feature = feature # replace this to encoder
         self.actor_mlp = actor_mlp
         self.actor_extractor = actor_extractor
 
