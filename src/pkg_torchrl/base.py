@@ -17,17 +17,54 @@ import torch.distributions as torch_dist
 
 from .utils import get_activation, make_collector, make_replay_buffer, reset_actor, reset_critic
 
+from autoEncoder.VAE import VAE
+
+vae = VAE(
+    base_channel_size=32,  
+    latent_dim=128,        
+    num_input_channels=3,  
+    width=54,              
+    height=54              
+)
+vae.load_state_dict(torch.load("autoEncoder/model/VAE_allnewdata_128e100.pth"))
+vae.eval()
+
+class Encoder(nn.Module):
+    def __init__(self, vae):
+        super(Encoder, self).__init__()
+        # 从 VAE 中提取 encoder 部分
+        self.encoder = vae.encoder
+        self.fc_mu = vae.fc_mu  # 只需要提取 fc_mu
+
+    def forward(self, x):
+        h = self.encoder(x)
+        h = h.view(h.size(0), -1)  # 展平为全连接输入
+        mu = self.fc_mu(h)         # 获取潜在表示
+        return mu
+
+encoder = Encoder(vae)
+encoder.eval()
 
 class ActorSequential(nn.Module):
     def __init__(self, feature, actor_mlp, actor_extractor):
         super().__init__()
-        self.feature = feature # replace this to encoder
+        
+        
+        # self.feature = feature # replace this to encoder
+        self.feature = encoder
+        print(f"features: {feature}")
         self.actor_mlp = actor_mlp
         self.actor_extractor = actor_extractor
 
     def forward(self, *data):
         pixels, internal = data
+        
+        if pixels.dim() == 3:  # If input is 3D, add batch dimension
+            pixels = pixels.unsqueeze(0)
+            
         embed = self.feature(pixels)
+        embed = embed.squeeze(0)
+        
         obs = torch.cat([embed, internal], dim=-1)
         x = self.actor_mlp(obs)
         if self.actor_extractor is None:
