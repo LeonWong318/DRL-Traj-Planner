@@ -54,12 +54,12 @@ class aeEncoder(nn.Module):
         return z
 ae = Autoencoder(
     base_channel_size=32,  
-    latent_dim=128,        
+    latent_dim=64,        
     num_input_channels=3,  
     width=54,              
     height=54              
 )
-ae.load_state_dict(torch.load("autoEncoder/model/autoencoder_allnewdata_128e100.pth"))
+ae.load_state_dict(torch.load("autoEncoder/model/autoencoder_allnewdata_64e100.pth"))
 ae.eval()
 
 
