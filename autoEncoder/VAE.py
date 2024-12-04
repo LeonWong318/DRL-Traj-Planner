@@ -8,6 +8,19 @@ import torch.optim as optim
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import pytorch_lightning as pl
+from torch.optim import Adam
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+
+
+
+import random
+
+
+from torchvision.utils import save_image, make_grid
+
+
+
+
 
 class VAE(pl.LightningModule):
     def __init__(self, 
@@ -56,6 +69,7 @@ class VAE(pl.LightningModule):
             nn.ConvTranspose2d(base_channel_size, num_input_channels, kernel_size=4, stride=2, padding=1),  # Upsample
             nn.Sigmoid()
         )
+        self.log_scale = nn.Parameter(torch.Tensor([0.0]))
 
     def encode(self, x):
         h = self.encoder(x)
@@ -64,10 +78,12 @@ class VAE(pl.LightningModule):
         logvar = self.fc_logvar(h)
         return mu, logvar
 
-    def reparameterize(self, mu, logvar):
-        std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
-        return mu + eps * std
+    def reparametrize(self, mu, log_var):
+        # Reparametrization Trick to allow gradients to backpropagate from the
+        # stochastic part of the model
+        sigma = torch.exp(0.5*log_var)
+        z = torch.randn_like(sigma)
+        return mu + sigma*z
 
     def decode(self, z):
         h = self.decoder_input(z)
@@ -77,41 +93,141 @@ class VAE(pl.LightningModule):
         h = F.interpolate(h, size=(self.height, self.width), mode="bilinear", align_corners=False)
         return h
 
+    def gaussian_likelihood(self, x_hat, logscale, x):
+        scale = torch.exp(logscale)
+        mean = x_hat
+        dist = torch.distributions.Normal(mean, scale)
 
+        # measure prob of seeing image under p(x|z)
+        log_pxz = dist.log_prob(x)
+
+        return log_pxz.sum(dim=(1, 2, 3))
+
+    def kl_divergence(self, z, mu, std):
+        # --------------------------
+        # Monte carlo KL divergence
+        # --------------------------
+        # 1. define the first two probabilities (in this case Normal for both)
+        p = torch.distributions.Normal(torch.zeros_like(mu), torch.ones_like(std))
+        q = torch.distributions.Normal(mu, std)
+
+        # 2. get the probabilities from the equation
+        log_qzx = q.log_prob(z)
+        log_pz = p.log_prob(z)
+
+        # kl
+        kl = (log_qzx - log_pz)
+        kl = kl.sum(-1)
+        return kl
+    
     def forward(self, x):
-        mu, logvar = self.encode(x)
-        z = self.reparameterize(mu, logvar)
-        recon_x = self.decode(z)
-        return recon_x, mu, logvar
+        mu, log_var = self.encode(x)
+        std = torch.exp(log_var / 2)
+
+        #Sample from distribution
+        q = torch.distributions.Normal(mu, std)
+        z = q.rsample()
+
+        #Push sample through decoder
+        x_hat = self.decode(z)
+
+        return mu, std, z, x_hat
     
     
-    def _get_reconstruction_loss(self, batch):
-        """
-        Calculate the reconstruction loss (MSE).
-        """
-        x = batch  # Assuming batch contains only images
-        recon_x, _, _ = self(x)
-        loss = F.mse_loss(recon_x, x, reduction="none")
-        loss = loss.sum(dim=[1, 2, 3]).mean(dim=0)
-        return loss
-
-    def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=1e-3)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.2, patience=10, min_lr=1e-5)
-        return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss"}
-
     def training_step(self, batch, batch_idx):
-        loss = self._get_reconstruction_loss(batch)
-        self.log('train_loss', loss, prog_bar=True)
-        return loss
+
+        x = batch
+
+        mu, std, z, x_hat = self.forward(x)
+
+        # reconstruction loss
+        recon_loss = self.gaussian_likelihood(x_hat, self.log_scale, x)
+
+        #expectation under z of the kl divergence between q(z|x) and
+        #a standard normal distribution of the same shape
+        kl = self.kl_divergence(z, mu, std)
+
+        # elbo
+        elbo = (kl - recon_loss)
+        elbo = elbo.mean()
+        #elbo = torch.tensor(elbo, device=self.device) if not isinstance(elbo, torch.Tensor) else elbo
+        self.log('train_loss', elbo, on_step=True,
+                 on_epoch=True, prog_bar=True)
+        self.log('train_kl_loss', kl.mean(), on_step=True,
+                 on_epoch=True, prog_bar=False)
+        self.log('train_recon_loss', recon_loss.mean(), on_step=True,
+                 on_epoch=True, prog_bar=False)
+        
+
+        # train_images = make_grid(x[:16]).cpu().numpy()
+        return elbo
 
     def validation_step(self, batch, batch_idx):
-        loss = self._get_reconstruction_loss(batch)
-        self.log('val_loss', loss, prog_bar=True)
 
-    def test_step(self, batch, batch_idx):
-        loss = self._get_reconstruction_loss(batch)
-        self.log('test_loss', loss)
+        x = batch
+
+        mu, std, z, x_hat = self.forward(x)
+
+        # reconstruction loss
+        recon_loss = self.gaussian_likelihood(x_hat, self.log_scale, x)
+
+        #expectation under z of the kl divergence between q(z|x) and
+        #a standard normal distribution of the same shape
+        kl = self.kl_divergence(z, mu, std)
+
+        # elbo
+        elbo = kl - recon_loss
+        elbo = elbo.mean()
+        #elbo = torch.tensor(elbo, device=self.device) if not isinstance(elbo, torch.Tensor) else elbo
+        self.log('val_loss', elbo, on_step=False, on_epoch=True)
+        self.log('val_kl_loss', kl.mean(), on_step=False, on_epoch=True)
+        self.log('val_recon_loss', recon_loss.mean(), on_step=False, on_epoch=True)
+        
+
+        #self.logger.experiment.add_image('Normalized Inputs', make_grid(x[:8]))
+
+
+        return x_hat, elbo
+
+    def configure_optimizers(self):
+        optimizer = Adam(self.parameters(), lr=1e-3)
+        lr_scheduler = ReduceLROnPlateau(optimizer,)
+        return {
+            "optimizer": optimizer, "lr_scheduler": lr_scheduler,
+            "monitor": "val_loss"
+        }
+
+    def interpolate(self, x1, x2):
+        assert x1.shape == x2.shape, "Inputs must be of the same shape"
+        if x1.dim() == 3:
+            x1 = x1.unsqueeze(0)
+        if x2.dim() == 3:
+            x2 = x2.unsqueeze(0)
+        if self.training:
+            raise Exception(
+                "This function should not be called when model is still "
+                "in training mode. Use model.eval() before calling the "
+                "function")
+        mu1, lv1 = self.encode(x1)
+        mu2, lv2 = self.encode(x2)
+        z1 = self.reparametrize(mu1, lv1)
+        z2 = self.reparametrize(mu2, lv2)
+        weights = torch.arange(0.1, 0.9, 0.1)
+        intermediate = [self.decode(z1)]
+        for wt in weights:
+            inter = (1.-wt)*z1 + wt*z2
+            intermediate.append(self.decode(inter))
+        intermediate.append(self.decode(z2))
+        out = torch.stack(intermediate, dim=0).squeeze(1)
+        return out, (mu1, lv1), (mu2, lv2)
+
+    @staticmethod
+    def custom_transform(normalization):
+        return None, None
+
+    # def test_step(self, batch, batch_idx):
+    #     loss = self._get_reconstruction_loss(batch)
+    #     self.log('test_loss', loss)
 
 
 

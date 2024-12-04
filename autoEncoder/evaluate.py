@@ -86,7 +86,7 @@ def evaluate_model(model, test_loader, num_samples=5, arch_name='VAE'):
             reconstructed = model(batch)
             
             if arch_name == 'VAE':
-                reconstructed = reconstructed[0]
+                reconstructed = reconstructed[3]
                 
             loss = torch.nn.functional.mse_loss(batch, reconstructed, reduction="sum")
             # if arch_name == 'VAE':
@@ -104,7 +104,7 @@ def evaluate_model(model, test_loader, num_samples=5, arch_name='VAE'):
     with torch.no_grad():
         reconstructed = model(batch)
     if arch_name == 'VAE':
-        reconstructed = reconstructed[0]
+        reconstructed = reconstructed[3]
 
     # Select a few samples to visualize
     # for i in range(min(num_samples, batch.size(0))):

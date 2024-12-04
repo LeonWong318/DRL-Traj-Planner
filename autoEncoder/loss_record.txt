@@ -16,6 +16,10 @@ VAE
 latent_dim = 128, Epoch = 200, Training Loss: 159.0557, Validation Loss: 161.1982
 latent_dim = 64, Epoch = 50, Training Loss: 162.7855, Validation Loss: 164.4252
 latent_dim = 64, Epoch = 100, Training Loss: 146.2473, Validation Loss: 149.4678
+test loss:
+latent_dim=128: 4277.3202
+latent_dim=64: 4299.3783
+latent_dim=8: 5018.5144
 =======
 Parameters:
 CNN-based:

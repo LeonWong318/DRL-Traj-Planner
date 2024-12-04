@@ -20,11 +20,15 @@ class LossLoggerCallback(Callback):
         global train_losses, val_losses
 
         # Access logged metrics
-        train_loss = trainer.logged_metrics.get("train_loss")
-        val_loss = trainer.logged_metrics.get("val_loss")
+        train_loss = trainer.callback_metrics.get("train_loss")
+        val_loss = trainer.callback_metrics.get("val_loss")
         
-        train_losses.append(float(train_loss.item()))  # Convert tensor to float
-        val_losses.append(float(val_loss.item()))  # Convert tensor to float
+        # if isinstance(train_loss, torch.Tensor):
+        train_losses.append(float(train_loss))  # Convert tensor to float
+        val_losses.append(float(val_loss))  # Convert tensor to float
+        # else:
+        #     train_losses.append(train_loss)  
+        #     val_losses.append(val_loss)  
             
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a simple model')
@@ -105,6 +109,7 @@ def main():
     torch.save(model.state_dict(), f"./model/{arch_name}_allnewdata_{latent_dim}e{num_epochs}.pth")
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
     # Plot and save the loss curve
     plt.figure(figsize=(10, 6))
     plt.plot(train_losses, label='Train Loss')
