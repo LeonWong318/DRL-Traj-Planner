@@ -11,6 +11,6 @@
 runs/
 wandb/
 .idea/
-Model/testing
+# Model/testing
 Model/cr_experiment
 lightning_logs/

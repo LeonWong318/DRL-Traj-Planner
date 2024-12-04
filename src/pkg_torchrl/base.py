@@ -54,18 +54,18 @@ class aeEncoder(nn.Module):
         return z
 ae = Autoencoder(
     base_channel_size=32,  
-    latent_dim=64,        
+    latent_dim=128,        
     num_input_channels=3,  
     width=54,              
     height=54              
 )
-ae.load_state_dict(torch.load("autoEncoder/model/autoencoder_allnewdata_64e100.pth"))
+ae.load_state_dict(torch.load("autoEncoder/model/autoencoder_allnewdata_128e100.pth"))
 ae.eval()
 
 
 # encoder = vaeEncoder(vae)
-encoder = aeEncoder(ae)
-encoder.eval()
+pre_encoder = aeEncoder(ae)
+pre_encoder.eval()
 
 class ActorSequential(nn.Module):
     def __init__(self, feature, actor_mlp, actor_extractor):
@@ -73,8 +73,8 @@ class ActorSequential(nn.Module):
         
         
         # self.feature = feature # replace this to encoder
-        self.feature = encoder
-        print(f"features: {feature}")
+        self.feature = pre_encoder
+        print(f"features: {self.feature}")
         self.actor_mlp = actor_mlp
         self.actor_extractor = actor_extractor
 
@@ -87,7 +87,9 @@ class ActorSequential(nn.Module):
         embed = self.feature(pixels)
         embed = embed.squeeze(0)
         
+        # print(f"embsize: {embed.size()}")
         obs = torch.cat([embed, internal], dim=-1)
+        # print(f"obssize: {obs.size()}")
         x = self.actor_mlp(obs)
         if self.actor_extractor is None:
             return x, embed
