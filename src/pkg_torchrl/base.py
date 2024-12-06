@@ -63,10 +63,14 @@ ae.load_state_dict(torch.load("autoEncoder/model/autoencoder_allnewdata_128e100.
 ae.eval()
 
 
+
 # encoder = vaeEncoder(vae)
 pre_encoder = aeEncoder(ae)
 pre_encoder.eval()
 
+for param in pre_encoder.parameters():
+    param.requires_grad = False
+    
 class ActorSequential(nn.Module):
     def __init__(self, feature, actor_mlp, actor_extractor):
         super().__init__()
@@ -101,12 +105,16 @@ class ActorSequential(nn.Module):
 class CriticSequential(nn.Module):
     def __init__(self, feature, critic_mlp):
         super().__init__()
-        self.feature = feature
+        self.feature = pre_encoder
         self.critic_mlp = critic_mlp
 
     def forward(self, *data):
         pixels, internal, action = data
+        
+        if pixels.dim() == 3:  # If input is 3D, add batch dimension
+            pixels = pixels.unsqueeze(0)
         embed = self.feature(pixels)
+        embed = embed.squeeze(0)
         obs = torch.cat([embed, internal], dim=-1)
         if action is not None:
             obs = torch.cat([obs, action], dim=-1)
