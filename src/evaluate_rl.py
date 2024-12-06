@@ -1,4 +1,5 @@
 ### System import
+import copy
 import os
 import pathlib
 from pathlib import Path
@@ -141,7 +142,7 @@ def main_process(rl_index:int=1, decision_mode:int=1, to_plot=False, scene_optio
 
                     if dyn_obstacle_list:
                         traj_gen.update_dynamic_constraints(dyn_obstacle_pred_list)
-                    original_ref_traj, _ = traj_gen.get_local_ref_traj()
+                    original_ref_traj, _, _ = traj_gen.get_local_ref_traj()
                     chosen_ref_traj = original_ref_traj
                     timer_mpc = PieceTimer()
                     try:
@@ -165,7 +166,10 @@ def main_process(rl_index:int=1, decision_mode:int=1, to_plot=False, scene_optio
                         td_action = base_model.model["policy"](state)
                     last_rl_time = timer_rl(4, ms=True)
                     next_state = env_eval.step(td_action)
+                    success = next_state["next"]["success"].cpu().numpy()
+
                     done = next_state["next"]["done"].cpu().numpy()
+                    state = step_mdp(next_state)
 
                 elif decision_mode == 2:
                     traj_gen.set_current_state(env_eval.unwrapped.agent.state)
@@ -176,8 +180,69 @@ def main_process(rl_index:int=1, decision_mode:int=1, to_plot=False, scene_optio
                         td_action = cr_model.model["policy"](state)
                     last_rl_time = timer_rl(4, ms=True)
                     next_state = env_eval.step(td_action)
+                    success = next_state["next"]["success"].cpu().numpy()
                     done = next_state["next"]["done"].cpu().numpy()
+                    state = step_mdp(next_state)
 
+                elif decision_mode == 3:
+                    env_eval.unwrapped.set_agent_state(traj_gen.state[:2], traj_gen.state[2], 
+                                             traj_gen.last_action[0], traj_gen.last_action[1])
+                    timer_rl = PieceTimer()
+                    # action_index, _states = ddpg_model.predict(obsv, deterministic=True)
+                    with set_exploration_type(ExplorationType.DETERMINISTIC), torch.no_grad():
+                        td_action = base_model.model["policy"](state)
+
+                    action_index = td_action["action"].numpy()
+                    # print(action_index)
+                    # action_index = [1., 1.]
+
+                    ### Manual step
+                    env_eval.unwrapped.step_obstacles()
+                    env_eval.unwrapped.update_status(reset=False)
+                    obsv = env_eval.unwrapped.get_observation()
+                    done = env_eval.unwrapped.update_termination()
+                    info = env_eval.unwrapped.get_info()
+                    success = info["success"]
+
+                    next_state = env_eval.step(td_action)
+                    # done = next_state["next"]["done"].cpu().numpy()
+                    state = step_mdp(next_state)
+
+                    rl_ref = []
+                    robot_sim:MobileRobot = copy.deepcopy(env_eval.agent)
+                    robot_sim:MobileRobot
+                    for j in range(20):
+                        if j == 0:
+                            robot_sim.step(action_index, traj_gen.config.ts)
+                        else:
+                            robot_sim.step_with_ref_speed(traj_gen.config.ts, 1.0)
+                        rl_ref.append(list(robot_sim.position))
+                    last_rl_time = timer_rl(4, ms=True)
+                    
+                    if dyn_obstacle_list:
+                        traj_gen.update_dynamic_constraints(dyn_obstacle_pred_list)
+                    original_ref_traj, rl_ref_traj,extra_ref_traj = traj_gen.get_local_ref_traj(np.array(rl_ref),20)
+                    filtered_ref_traj = ref_traj_filter(original_ref_traj, rl_ref_traj, decay=1) # decay=1 means no decay
+                    # if extra_ref_traj.any() == None:
+                    # if switch.switch(traj_gen.state[:2], extra_ref_traj.tolist(), filtered_ref_traj.tolist(), geo_map.processed_obstacle_list+dyn_obstacle_list_poly):
+                    chosen_ref_traj = filtered_ref_traj
+                    # else:
+                    #     chosen_ref_traj = original_ref_traj
+                    timer_mpc = PieceTimer()
+                    # else:
+                    #     if switch.switch(traj_gen.state[:2], extra_ref_traj.tolist(), filtered_ref_traj.tolist(), geo_map.processed_obstacle_list+dyn_obstacle_list_poly):
+                    #         chosen_ref_traj = filtered_ref_traj
+                    #     else:
+                    #         chosen_ref_traj = original_ref_traj
+                    #     timer_mpc = PieceTimer()
+
+                    try:
+                        mpc_output = traj_gen.get_action(chosen_ref_traj) # MPC computes the action
+                    except Exception as e:
+                        done = True
+                        print(f'MPC fails: {e}')
+                        break
+                    last_mpc_time = timer_mpc(4, ms=True)
                 else:
                     raise ValueError("Invalid decision mode")
                 
@@ -193,7 +258,10 @@ def main_process(rl_index:int=1, decision_mode:int=1, to_plot=False, scene_optio
                     time_list.append(last_rl_time)
                     if to_plot:
                         print(f"Step {i}.Runtime (Curriculum): {last_rl_time}ms")     
-
+                elif decision_mode == 3:
+                    time_list.append(last_mpc_time)
+                    if to_plot:
+                        print(f"Step {i}.Runtime (Hybrid): {last_rl_time}ms")  
 
                 if to_plot & (i%1==0): # render every third frame
                     env_eval.unwrapped.render(dqn_ref=rl_ref, actual_ref=chosen_ref_traj)
@@ -207,11 +275,8 @@ def main_process(rl_index:int=1, decision_mode:int=1, to_plot=False, scene_optio
                         input('Collision or finish! Press enter to continue...')
                     break
                 
-                state = step_mdp(next_state)
 
     action_list = [(v, w) for (v, w) in zip(env_eval.unwrapped.speeds, env_eval.unwrapped.angular_velocities)]
-
-    success = next_state["next"]["success"].cpu().numpy()
 
     if verbose:
         print(f"Average time ({prt_decision_mode[decision_mode]}): {np.mean(time_list)}ms\n")
@@ -228,7 +293,7 @@ def main_evaluate(rl_index: int, decision_mode, metrics: Metrics, scene_option:T
                                                                                      verbose=False)
     
     np_traj = np.stack(actual_traj)
-    np.savetxt(f"../Model/cr_experiment/trajectories/{decision_mode}_{rl_index}_{scene_option}.txt", np_traj, delimiter=",")
+    np.savetxt(f"../Model/cr_experiment/trajectories/{decision_mode}_{rl_index}_{scene_option}_v2.txt", np_traj, delimiter=",")
 
     metrics.add_trial_result(computation_time_list=time_list, succeed=success, action_list=actions, 
                              ref_trajectory=ref_traj, actual_trajectory=actual_traj, obstacle_list=obstacle_list)
@@ -260,13 +325,13 @@ if __name__ == '__main__':
     rl_index: 0 = image, 1 = ray
     decision_mode: 0 = MPC, 1 = Baseline, 2 = Curriculum
     """
-    num_trials = 9 # 50
+    num_trials = 1 # 50
     print_latex = True
     scene_option_list = [
                         #  (1, 1, 1), # a-small
                         #  (1, 1, 2), # a-medium
                         #  (1, 1, 3), # b-large
-                        #  (1, 2, 1), # c-small
+                         (1, 2, 1), # c-small
                         #  (1, 2, 2), # d-large
                         #  (1, 2, 3), # d-large
                         #  (1, 2, 4), # d-large
@@ -279,9 +344,9 @@ if __name__ == '__main__':
                         # (1, 4, 3), # ?
                         # (1, 4, 4), # ?
                         # (1, 5, 1) # eval map long
-                        (1, 5, 2), # eval map
+                        # (1, 5, 2), # eval map
                         # (1, 5, 3), # eval map
-                        (1, 7, 1),
+                        # (1, 7, 1),
                          ]
                         #  (2, 1, 1), # right turn with an obstacle
                         #  (2, 1, 2), # sharp turn with an obstacle
@@ -294,35 +359,43 @@ if __name__ == '__main__':
         mpc_metrics = Metrics(mode='MPC')
         baseline_metrics = Metrics(mode='Baseline')
         cr_metrics = Metrics(mode='Curriculum')
+        hybrid_metrics = Metrics(mode='HYB-TD3-V')
 
         for i in range(num_trials):
             rl_index = i + 1
             print(f"Trial {i+1}/{num_trials}")
             # mpc_metrics = main_evaluate(rl_index=1, decision_mode=0, metrics=mpc_metrics, scene_option=scene_option)
             baseline_metrics = main_evaluate(rl_index=rl_index, decision_mode=1, metrics=baseline_metrics, scene_option=scene_option)
-            cr_metrics = main_evaluate(rl_index=rl_index, decision_mode=2, metrics=cr_metrics, scene_option=scene_option)
+            # cr_metrics = main_evaluate(rl_index=rl_index, decision_mode=2, metrics=cr_metrics, scene_option=scene_option)
+            # hybrid_metrics = main_evaluate(rl_index=rl_index, decision_mode=3, metrics=hybrid_metrics, scene_option=scene_option)
 
         round_digits = 2
         print(f"=== Scene {scene_option[0]}-{scene_option[1]}-{scene_option[2]} ===")
+        # print('MPC')
+        # print(mpc_metrics.get_average(round_digits))
+        # print()
         print('Baseline')
         print(baseline_metrics.get_average(round_digits))
-        print()
-        print('Curriculum')
-        print(cr_metrics.get_average(round_digits))
-        print()
+        # print()
+        # print('Curriculum')
+        # print(cr_metrics.get_average(round_digits))
+        # print()
+        # print('Hybrid')
+        # print(hybrid_metrics.get_average(round_digits))
 
 
         ## Write to latex
-        if print_latex:
-            print(f"=== Scene {scene_option[0]}-{scene_option[1]}-{scene_option[2]} ===")
-            print(baseline_metrics.write_latex(round_digits))
-            print(cr_metrics.write_latex(round_digits))
+        # if print_latex:
+        #     print(f"=== Scene {scene_option[0]}-{scene_option[1]}-{scene_option[2]} ===")
+        #     # print(baseline_metrics.write_latex(round_digits))
+        #     print(cr_metrics.write_latex(round_digits))
 
-            baseline_results = baseline_metrics.write_latex(round_digits)
-            cr_results = cr_metrics.write_latex(round_digits)
+        #     # baseline_results = baseline_metrics.write_latex(round_digits)
+        #     cr_results = cr_metrics.write_latex(round_digits)
+        #     hybrid_results = hybrid_metrics.write_latex(round_digits)
 
-            with open("../Model/cr_experiment/base_results.txt", "w") as file:
-                file.write(baseline_results)
+        #     with open("../Model/cr_experiment/hybrid_results.txt", "w") as file:
+        #         file.write(hybrid_results)
 
-            with open("../Model/cr_experiment/cr_results.txt", "w") as file:
-                file.write(cr_results)
+        #     with open("../Model/cr_experiment/cr_results.txt", "w") as file:
+        #         file.write(cr_results)

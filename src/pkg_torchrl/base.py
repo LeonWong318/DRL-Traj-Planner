@@ -62,14 +62,14 @@ ae = Autoencoder(
 ae.load_state_dict(torch.load("autoEncoder/model/autoencoder_allnewdata_128e100.pth"))
 ae.eval()
 
-
+for param in ae.parameters():
+    param.requires_grad = False
 
 # encoder = vaeEncoder(vae)
 pre_encoder = aeEncoder(ae)
 pre_encoder.eval()
 
-for param in pre_encoder.parameters():
-    param.requires_grad = False
+
     
 class ActorSequential(nn.Module):
     def __init__(self, feature, actor_mlp, actor_extractor):
