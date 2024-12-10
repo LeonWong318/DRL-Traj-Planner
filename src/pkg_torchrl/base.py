@@ -79,8 +79,8 @@ class ActorSequential(nn.Module):
         super().__init__()
         
         
-        self.feature = feature # replace this to encoder
-        # self.feature = pre_encoder
+        # self.feature = feature # replace this to encoder
+        self.feature = pre_encoder
         # print(f"features: {self.feature}")
         self.actor_mlp = actor_mlp
         self.actor_extractor = actor_extractor
@@ -88,11 +88,11 @@ class ActorSequential(nn.Module):
     def forward(self, *data):
         pixels, internal = data
         
-        # if pixels.dim() == 3:  # If input is 3D, add batch dimension
-        #     pixels = pixels.unsqueeze(0)
+        if pixels.dim() == 3:  # If input is 3D, add batch dimension
+            pixels = pixels.unsqueeze(0)
             
         embed = self.feature(pixels)
-        # embed = embed.squeeze(0)
+        embed = embed.squeeze(0)
         
         # print(f"embsize: {embed.size()}")
         obs = torch.cat([embed, internal], dim=-1)
