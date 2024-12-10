@@ -12,8 +12,8 @@ class CurriculumConfig(BaseModel):
     num_updates_after_update: int = 25_000
 
     # "g": ReachGoal, "s": Speed, "d": PathProgress, "c": Collision, "a": Acceleration, "x": CrossTrack
-    base_reward_keys: str = "gds"
-    all_reward_keys: str = "gd" #original gdcsax
+    base_reward_keys: str = "gdsc"
+    all_reward_keys: str = "gdcsax" #original gdcsax
 
 
 class RLConfig(BaseModel):
@@ -151,7 +151,7 @@ class BaseConfig(BaseModel):
     w4: float = 0.1  # cross track
     w5: float = 0.    # NOT USED obstacle distance
 
-    algo: str = "ddpg"  # choices: ["sac", "ppo", "td3", "ddpg"]
+    algo: str = "sac"  # choices: ["sac", "ppo", "td3", "ddpg"]
 
     pretrain: PretrainConfig = PretrainConfig()
     sac: SACConfig = SACConfig()
