@@ -328,25 +328,25 @@ if __name__ == '__main__':
     num_trials = 1 # 50
     print_latex = True
     scene_option_list = [
-                        #  (1, 1, 1), # a-small
-                        #  (1, 1, 2), # a-medium
-                        #  (1, 1, 3), # b-large
+                         (1, 1, 1), # a-small
+                         (1, 1, 2), # a-medium
+                         (1, 1, 3), # b-large
                          (1, 2, 1), # c-small
-                        #  (1, 2, 2), # d-large
-                        #  (1, 2, 3), # d-large
-                        #  (1, 2, 4), # d-large
-                        #  (1, 3, 1), # e-small
-                        #  (1, 3, 2), # f-large
-                        #  (1, 3, 3), # ?
-                        #  (1, 3, 4), # ?
-                        #  (1, 4, 1), # face-to-face
-                        #  (1, 4, 2), # ?
-                        # (1, 4, 3), # ?
-                        # (1, 4, 4), # ?
-                        # (1, 5, 1) # eval map long
-                        # (1, 5, 2), # eval map
-                        # (1, 5, 3), # eval map
-                        # (1, 7, 1),
+                         (1, 2, 2), # d-large
+                         (1, 2, 3), # d-large
+                         (1, 2, 4), # d-large
+                         (1, 3, 1), # e-small
+                         (1, 3, 2), # f-large
+                         (1, 3, 3), # ?
+                         (1, 3, 4), # ?
+                         (1, 4, 1), # face-to-face
+                         (1, 4, 2), # ?
+                        (1, 4, 3), # ?
+                        (1, 4, 4), # ?
+                        (1, 5, 1), # eval map long
+                        (1, 5, 2), # eval map
+                        (1, 5, 3), # eval map
+                        (1, 7, 1),
                          ]
                         #  (2, 1, 1), # right turn with an obstacle
                         #  (2, 1, 2), # sharp turn with an obstacle

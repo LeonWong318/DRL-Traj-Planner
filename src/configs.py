@@ -13,7 +13,7 @@ class CurriculumConfig(BaseModel):
 
     # "g": ReachGoal, "s": Speed, "d": PathProgress, "c": Collision, "a": Acceleration, "x": CrossTrack
     base_reward_keys: str = "gds"
-    all_reward_keys: str = "gdcsax"
+    all_reward_keys: str = "gds" #original gdcsax
 
 
 class RLConfig(BaseModel):
@@ -143,7 +143,7 @@ class BaseConfig(BaseModel):
     device: str = "cuda"
     use_vec_norm: bool = False
     n_envs: int = 1
-    use_wandb: bool = False
+    use_wandb: bool = True
 
     w1: float = 0.1  # speed
     w2: float = 0.1  # acceleration

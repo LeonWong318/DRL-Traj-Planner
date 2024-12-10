@@ -81,7 +81,7 @@ class ActorSequential(nn.Module):
         
         self.feature = feature # replace this to encoder
         # self.feature = pre_encoder
-        print(f"features: {self.feature}")
+        # print(f"features: {self.feature}")
         self.actor_mlp = actor_mlp
         self.actor_extractor = actor_extractor
 
@@ -109,6 +109,7 @@ class CriticSequential(nn.Module):
     def __init__(self, feature, critic_mlp):
         super().__init__()
         self.feature = pre_encoder
+        # self.feature = feature
         self.critic_mlp = critic_mlp
 
     def forward(self, *data):
