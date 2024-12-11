@@ -151,7 +151,7 @@ class BaseConfig(BaseModel):
     w4: float = 0.1  # cross track
     w5: float = 0.    # NOT USED obstacle distance
 
-    algo: str = "td3"  # choices: ["sac", "ppo", "td3", "ddpg"]
+    algo: str = "sac"  # choices: ["sac", "ppo", "td3", "ddpg"]
 
     pretrain: PretrainConfig = PretrainConfig()
     sac: SACConfig = SACConfig()

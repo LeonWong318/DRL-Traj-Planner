@@ -7,7 +7,7 @@ class EpisodeDataset(Dataset):
     Dataset that loads tensors from episodes stored in a structured directory.
     """
 
-    def __init__(self, base_path="../data", episode_prefix="Episode_", file_prefix="img_", file_extension=".pt"):
+    def __init__(self, base_path="../../data", episode_prefix="Episode_", file_prefix="img_", file_extension=".pt"):
         """
         Initialize the dataset.
 
