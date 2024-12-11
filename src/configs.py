@@ -79,9 +79,9 @@ class RLConfig(BaseModel):
 
 
 class SACConfig(RLConfig):
-    actor_lr: float = 3.0e-4
-    critic_lr: float = 3.0e-4
-    alpha_lr: float = 3.0e-4
+    actor_lr: float = 3.0e-5 #original 3.0e-4
+    critic_lr: float = 3.0e-5
+    alpha_lr: float = 3.0e-5
     target_update_polyak: float = 0.995
     alpha_init: float = 1.0
     min_alpha: Optional[float] = 0.01

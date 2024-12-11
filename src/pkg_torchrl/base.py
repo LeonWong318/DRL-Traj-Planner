@@ -18,7 +18,7 @@ import torch.distributions as torch_dist
 from .utils import get_activation, make_collector, make_replay_buffer, reset_actor, reset_critic
 
 from autoEncoder.VAE import VAE 
-from autoEncoder.autoEncoder import Autoencoder
+from autoEncoder.autoEncoder_origin import Autoencoder
 
 vae = VAE(
     base_channel_size=32,  
@@ -27,7 +27,7 @@ vae = VAE(
     width=54,              
     height=54              
 )
-# vae.load_state_dict(torch.load("autoEncoder/model/VAE_allnewdata_128e100.pth"))
+vae.load_state_dict(torch.load("autoEncoder/model/VAE_allnewdata_128e100.pth"))
 vae.eval()
 
 class vaeEncoder(nn.Module):
@@ -59,17 +59,17 @@ ae = Autoencoder(
     width=54,              
     height=54              
 )
-# ae.load_state_dict(torch.load("autoEncoder/model/autoencoder_allnewdata_128e100.pth"))
+ae.load_state_dict(torch.load("autoEncoder/model/autoencoder_allnewdata_128e100.pth"))
 ae.eval()
 
-# for param in ae.parameters():
-#     param.requires_grad = False
+for param in ae.parameters():
+    param.requires_grad = False
 
-# for param in vae.parameters():
-#     param.requires_grad = False
+for param in vae.parameters():
+    param.requires_grad = False
 
-# pre_encoder = vaeEncoder(vae)
-pre_encoder = aeEncoder(ae)
+pre_encoder = vaeEncoder(vae)
+# pre_encoder = aeEncoder(ae)
 pre_encoder.eval()
 
 
